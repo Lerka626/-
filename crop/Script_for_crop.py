@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 import threading
 
-CONFIDENCE_THRESHOLD = 0.5  # Порог уверенности для детекций
+CONFIDENCE_THRESHOLD = 0.9  # Порог уверенности для детекций
 IOU_THRESHOLDS = {
     'Bison': 0.6,
     'Sus': 0.6,
