@@ -1,0 +1,190 @@
+.result-container {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 85%;
+}
+
+.results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+
+}
+
+.photo-result-container {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: center;
+    width: 80%;
+}
+
+.photo-result-container img {
+    border-radius: 20px;
+    width: 100%;
+    max-height: 90%;
+}
+
+.text-results-container {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: flex-start;
+    height: 100%;
+}
+
+.text-results-container h2 {
+    font-size: 40px;
+    font-family: 'OpenSans Light';
+    margin: 0;
+    padding: 0;
+}
+
+.text-result-item {
+    margin-top: 20px;
+    width: 300px;
+    display: flex;
+    flex-direction: row;
+}
+
+.text-result-name {
+    font-family: 'OpenSans Extra Bold';
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 20px;
+}
+
+.text-result-name label {
+    font-family: 'OpenSans Light';
+    font-size: 22px;
+}
+
+.table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: start;
+    height: 100%;
+}
+
+table {
+    border-collapse: separate;
+    margin: 0;
+    padding: 0;
+    width: 90%;
+    table-layout: fixed;
+    border-radius: 20px;
+    overflow: hidden;
+}
+  
+table caption {
+    font-size: 1.5em;
+    margin: .5em 0 .75em;
+}
+  
+table tr {
+    background-color: #DCD7D1;
+    padding: .35em;
+    cursor: pointer;
+}
+
+table tr:hover {
+    background-color: #c8c4bf;
+    padding: .35em;
+    cursor: pointer;
+}
+  
+table th,
+table td {
+    padding: .625em;
+    text-align: center;
+}
+  
+table th {
+    font-size: .85em;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+table thead {
+    background-color: #777676;
+}
+
+.none {
+    display: none;
+}
+
+.go_away {
+    margin-top: 40px;
+    text-decoration: underline;
+    font-family: 'OpenSans Light';
+    cursor: pointer;
+}
+
+.work_answer {
+    display: grid;
+    grid-template-columns: 2fr 5fr;
+    grid-template-rows: 1fr;
+    flex: 1;
+}
+
+.diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: start;
+}
+
+.recharts-wrapper {
+    margin-top: -100px;
+}
+
+.name_of_block {
+    padding: 1rem;
+    background-color: #8F9ECA;
+    font-family: 'OpenSans Bold';
+    border-radius: 9px;
+    font-size: 17px;
+    color: white;
+    margin-bottom: 30px;
+    align-self: flex-start;
+    margin-left: 50px;
+}
+
+.pie-chart-name {
+    color: #8F9ECA;
+    font-family: 'OpenSans Light';
+    margin-bottom: 10px;
+    font-size: 19px;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+@media (max-width: 1000px) {
+    table th {
+        font-size: .3em;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        word-wrap: break-word; /* Позволяет переносить слова, если они не помещаются */
+        overflow-wrap: break-word; /* Современный аналог word-wrap, поддерживает перенос длинных слов */
+        white-space: normal;
+    }
+
+    .work_answer {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+    }
+}
+

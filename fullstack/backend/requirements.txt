@@ -1,0 +1,8 @@
+fastapi
+pathlib
+asyncpg
+inference_sdk
+numpy
+tensorflow
+keras
+uvicorn
