@@ -1,8 +1,9 @@
 fastapi
-pathlib
+uvicorn[standard]
+pydantic-settings
 asyncpg
-inference_sdk
 numpy
+opencv-python-headless
 tensorflow
-keras
-uvicorn
+inference-sdk
+python-multipart
