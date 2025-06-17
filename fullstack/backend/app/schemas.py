@@ -1,5 +1,7 @@
+# app/schemas.py
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from datetime import date
 
 # --- Схемы для эндпоинта /upload/ ---
 
@@ -32,5 +34,15 @@ class PassportInDB(PassportBase):
     type: str
 
     class Config:
-        # Позволяет Pydantic работать с объектами БД напрямую
         from_attributes = True
+
+# --- Схемы для истории загрузок (Zips) ---
+class ZipRecord(BaseModel):
+    id: int
+    upload_date: date
+    rare_animals_count: int
+    coordinates: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+

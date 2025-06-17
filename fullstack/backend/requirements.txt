@@ -4,6 +4,10 @@ pydantic-settings
 asyncpg
 numpy
 opencv-python-headless
-tensorflow
-inference-sdk
 python-multipart
+
+#ML
+torch
+torchvision
+tensorflow
+Pillow

@@ -3,43 +3,61 @@ from datetime import datetime
 
 
 class Settings(BaseSettings):
-    """
-    Класс для хранения всех конфигурационных переменных.
-    Значения могут быть переопределены переменными окружения.
-    """
-    # Настройки базы данных
+    # Данные для локального подключения к PostgreSQL
     DB_USER: str = "postgres"
     DB_PASS: str = "mastdmastd"
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_NAME: str = "sber_project"
 
-    # API ключи и настройки Roboflow
-    ROBOFLOW_API_KEY: str = "GyLAEnCOCynKOHoO2JDF"
-    ROBOFLOW_API_URL: str = "https://detect.roboflow.com"
-    ROBOFLOW_WORKSPACE: str = "pe1men24"
-    ROBOFLOW_WORKFLOW_ID: str = "detect-count-and-visualize-2"
+    # --- ИЗМЕНЕНИЕ НАЧАЛОСЬ ---
 
-    # Списки животных
-    RARE_ANIMALS_LIST: list[str] = ['Irbis']
+    # Список всех классов, которые предсказывает модель PyTorch.
+    # ПОРЯДОК СТРОГО ВАЖЕН и определен анализом ноутбука обучения.
+    SPECIES_CLASSES: list[str] = [
+        "Лось",
+        "Зубр",
+        "Серый волк",
+        "Косуля",
+        "Пятнистый олень",
+        "Заяц",
+        "Выдра",
+        "Рысь",
+        "Куница",
+        "Барсук",
+        "Норка",
+        "Енотовидная собака",
+        "Хорёк",
+        "Кабан"
+    ]
 
-    # Пути к директориям внутри контейнера
+    # Список видов, для которых будет запускаться идентификация по эмбеддингам.
+    # Используйте точные названия из списка SPECIES_CLASSES.
+    RARE_ANIMALS_LIST: list[str] = [
+        "Зубр",
+        "Серый волк",
+        "Рысь"
+    ]
+
+    # Настройки для ДВУХ моделей
+    CLASSIFIER_WEIGHTS: str = 'weights/best_resnet50.pth'
+    EMBEDDER_WEIGHTS: str = 'weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
+
+    # --- ИЗМЕНЕНИЕ ЗАКОНЧИЛОСЬ ---
+
+    # Пути к директориям
     IMAGE_DIR: str = "savedPredictions"
     UPLOADS_DIR: str = "uploads"
     PASSPORTS_DIR: str = "passports"
-    CROPPED_DIR: str = "cropped_images"
-    CROPPED_PASSPORTS_DIR: str = "cropped_passports"
 
-    # Настройки ML
-    RESNET_WEIGHTS: str = 'weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
     SIMILARITY_THRESHOLD: float = 0.9
 
     class Config:
-        # Позволяет Pydantic читать переменные из .env файла (если он есть)
         case_sensitive = True
 
 
 settings = Settings()
 
-# Глобальная переменная для даты, которая устанавливается при запуске
 DATE_OF_PHOTOS: str = datetime.today().strftime('%Y-%m-%d')
+
+
