@@ -131,7 +131,8 @@ async def upload_files_and_process(
 
         p_data = schemas.Prediction(
             IMG=filename, type=species, date=DATE_OF_PHOTOS,
-            size="N/A", confidence="N/A", passport=passport_id
+            size="N/A", confidence="N/A", passport=passport_id,
+            coordinates=coordinates
         )
         predictions_for_response.append(p_data)
 
@@ -211,6 +212,10 @@ async def get_uploads_by_zip(zip_id: int, conn: asyncpg.Connection = Depends(get
     if not output_records:
         raise HTTPException(status_code=404, detail="Записи для данной загрузки не найдены")
 
+    # Получаем координаты из таблицы zips
+    zip_record = await conn.fetchrow("SELECT coordinates FROM zips WHERE id = $1", zip_id)
+    coordinates = zip_record['coordinates'] if zip_record else None
+
     predictions_for_response = []
     animal_counts_diagram = {}
 
@@ -223,11 +228,12 @@ async def get_uploads_by_zip(zip_id: int, conn: asyncpg.Connection = Depends(get
             date=record['upload_date'].strftime('%Y-%m-%d'),
             size=str(record.get('size', 'N/A')),
             confidence=str(record.get('confidence', 'N/A')),
-            passport=record['pass_id']
+            passport=record['pass_id'],
+            coordinates=coordinates
         )
         predictions_for_response.append(p_data)
 
-    return {"pred": predictions_for_response, "diagram": animal_counts_diagram}
+    return {"pred": predictions_for_response, "diagram": animal_counts_diagram, "coordinates": coordinates}
 
 
 @app.get("/passport/{passport_id}/history")

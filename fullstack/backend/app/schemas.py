@@ -9,6 +9,7 @@ class Prediction(BaseModel):
     size: str
     confidence: str
     passport: Optional[int] = None
+    coordinates: Optional[str] = None
 
 class UploadResponse(BaseModel):
     pred: List[Prediction]
