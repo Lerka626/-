@@ -105,6 +105,12 @@
     align-self: flex-start;
 }
 
+/*
+ * =======================================================
+ * ==   СТИЛИ ДЛЯ МОДАЛЬНЫХ ОКОН (ОБЩИЕ)                ==
+ * =======================================================
+*/
+
 .modal-add-passport, .show_animal_passport {
   position: fixed;
   top: 0;
@@ -163,6 +169,7 @@
 .close:hover {
     color: #000;
 }
+
 
 .passport-modal-name, .modal-title {
     font-family: 'OpenSans Bold';
@@ -321,6 +328,18 @@
     background-color: #218838;
 }
 
+.passport-map-container {
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+.passport-map {
+    height: 250px;
+    width: 100%;
+    border-radius: 8px;
+    z-index: 1;
+}
+
 .passport-history {
     margin-top: 1.5rem;
     padding-top: 1rem;
@@ -354,18 +373,4 @@
 .passport-history p {
     font-style: italic;
     color: #888;
-}
-
-.passport-map-container {
-    width: 100%;
-    height: 250px;
-    margin-top: 1.5rem;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid #dee2e6;
-}
-
-.passport-map {
-    width: 100%;
-    height: 100%;
 }

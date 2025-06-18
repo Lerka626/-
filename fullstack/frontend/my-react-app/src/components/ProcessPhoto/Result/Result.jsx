@@ -6,21 +6,18 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const RARE_ANIMALS_LIST = ["Зубр", "Выдра", "Рысь", "Норка"];
 
-const ActionableRow = ({ item, allPassports, onActionComplete, showNotification, onOpenAddModal }) => {
+const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal }) => {
     const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
     const [selectedPassportId, setSelectedPassportId] = useState('');
-    const [openAddModal, setOpenAddModal] = useState(false);
-    const [inputs, setInputs] = useState({ age: '', gender: '', name: '' });
-    const [actionStatus, setActionStatus] = useState('idle');
 
     const relevantPassports = allPassports.filter(p => p.type === item.type);
 
     const handleAssign = async () => {
         if (!selectedPassportId) {
-            showNotification('Пожалуйста, выберите паспорт.', 'error');
+            onActionComplete('Пожалуйста, выберите паспорт.', 'error');
             return;
         }
-        setActionStatus('pending');
+
         const formData = new FormData();
         formData.append('image_name', item.IMG);
         formData.append('passport_id', selectedPassportId);
@@ -30,86 +27,45 @@ const ActionableRow = ({ item, allPassports, onActionComplete, showNotification,
         try {
             const response = await fetch(`${API_URL}/assign_passport/`, { method: 'POST', body: formData });
             if (!response.ok) throw new Error('Не удалось присвоить паспорт.');
-            showNotification('Фото успешно присвоено!', 'success');
-            setActionStatus('success');
+
+            // Получаем ответ, чтобы использовать его для обновления UI
+            const result = await response.json();
+
+            onActionComplete('Фото успешно присвоено!', 'success', {
+                img: item.IMG,
+                passportId: result.passport_id
+            });
+            setIsActionPanelOpen(false);
         } catch (error) {
-            showNotification(error.message, 'error');
-            setActionStatus('idle');
+            onActionComplete(error.message, 'error');
         }
     };
-
-    const handleAddPassportSubmit = async (e) => {
-        e.preventDefault();
-        setActionStatus('pending');
-        const formData = new FormData();
-        formData.append('image_name', item.IMG);
-        Object.entries(inputs).forEach(([key, value]) => formData.append(key, value));
-        formData.append('cords_sd', '0.0');
-        formData.append('cords_vd', '0.0');
-
-        try {
-            const response = await fetch(`${API_URL}/create_passport_from_upload/`, { method: 'POST', body: formData });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.detail || 'Не удалось создать паспорт.');
-            }
-            setOpenAddModal(false);
-            showNotification('Паспорт успешно создан!', 'success');
-            setActionStatus('success');
-        } catch (error) {
-            console.error(error);
-            showNotification(`Ошибка: ${error.message}`, 'error');
-            setActionStatus('idle');
-        }
-    };
-
-    const handleInputChange = (e) => setInputs({ ...inputs, [e.target.name]: e.target.value });
 
     return (
-        <>
-            <tr className="actionable-row">
-                <td className="filename-cell">{item.IMG}</td>
-                <td>{item.type}</td>
-                <td className="action-cell">
-                    {actionStatus === 'success' ? (
-                        <span className="action-success-text">Выполнено</span>
-                    ) : actionStatus === 'pending' ? (
-                        <span>Выполняется...</span>
-                    ) : !isActionPanelOpen ? (
-                        <button className="action-button" onClick={() => setIsActionPanelOpen(true)}>Принять решение</button>
-                    ) : (
-                        <div className="action-panel">
-                            <p>Это новая особь или уже известная?</p>
-                            <div className="action-buttons">
-                                <button className="create-new-btn" onClick={() => setOpenAddModal(true)}>Создать новый паспорт</button>
-                                <div className="assign-existing">
-                                    <select value={selectedPassportId} onChange={(e) => setSelectedPassportId(e.target.value)}>
-                                        <option value="">-- Выбрать паспорт --</option>
-                                        {relevantPassports.map(p => (<option key={p.id} value={p.id}>{p.name} (ID: {p.id})</option>))}
-                                    </select>
-                                    <button onClick={handleAssign} disabled={!selectedPassportId}>Присвоить</button>
-                                </div>
+        <tr className="actionable-row">
+            <td className="filename-cell" data-label="Имя файла">{item.IMG}</td>
+            <td data-label="Распознанный вид">{item.type}</td>
+            <td className="action-cell" data-label="Паспорт особи">
+                {!isActionPanelOpen ? (
+                    <button className="action-button" onClick={() => setIsActionPanelOpen(true)}>Принять решение</button>
+                ) : (
+                    <div className="action-panel">
+                        <p>Это новая особь или уже известная?</p>
+                        <div className="action-buttons">
+                            <button className="create-new-btn" onClick={() => onOpenAddModal(item)}>Создать новый паспорт</button>
+                            <div className="assign-existing">
+                                <select value={selectedPassportId} onChange={(e) => setSelectedPassportId(e.target.value)}>
+                                    <option value="">-- Выбрать паспорт --</option>
+                                    {relevantPassports.map(p => (<option key={p.id} value={p.id}>{p.name} (ID: {p.id})</option>))}
+                                </select>
+                                <button onClick={handleAssign} disabled={!selectedPassportId}>Присвоить</button>
                             </div>
-                            <button className="cancel-btn" onClick={() => setIsActionPanelOpen(false)}>Отмена</button>
                         </div>
-                    )}
-                </td>
-            </tr>
-
-            <div className={`modal-add-passport ${openAddModal ? 'visible' : 'hidden'}`}>
-                 <div className="add-passport-container">
-                    <div className="close" onClick={() => setOpenAddModal(false)}>&times;</div>
-                    <h4 className="modal-title">Создание паспорта для: {item.type}</h4>
-                    <form className="inputs_passport" onSubmit={handleAddPassportSubmit}>
-                        <div className="add_name"><label>Имя</label><input type="text" name="name" onChange={handleInputChange} required /></div>
-                        <div className="add_name"><label>Возраст</label><input type="number" name="age" onChange={handleInputChange} required /></div>
-                        <div className="add_name"><label>Пол</label><input type="text" name="gender" onChange={handleInputChange} required /></div>
-                        <p className="modal-info">Фото и координаты будут взяты из исходного снимка.</p>
-                        <button type="submit">Создать паспорт</button>
-                    </form>
-                </div>
-            </div>
-        </>
+                        <button className="cancel-btn" onClick={() => setIsActionPanelOpen(false)}>Отмена</button>
+                    </div>
+                )}
+            </td>
+        </tr>
     );
 };
 
@@ -122,11 +78,10 @@ export default function Result({ params, setParams }) {
     const [galleryPhotos, setGalleryPhotos] = useState([]);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [allPassports, setAllPassports] = useState([]);
-    const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-
     const [openAddModal, setOpenAddModal] = useState(false);
     const [itemForNewPassport, setItemForNewPassport] = useState(null);
     const [inputs, setInputs] = useState({ age: '', gender: '', name: '' });
+    const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
     const COLORS_pie = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560'];
 
@@ -136,24 +91,44 @@ export default function Result({ params, setParams }) {
             setNotification({ show: false, message: '', type: '' });
         }, 3000);
     };
-
-    useEffect(() => {
-        const fetchAllPassports = async () => {
-            try {
-                const response = await fetch(`${API_URL}/all_passports`);
-                const data = await response.json();
-                setAllPassports(data);
-            } catch (error) {
-                console.error("Не удалось загрузить паспорта для присвоения:", error);
-            }
-        };
-        fetchAllPassports();
+    const fetchAllPassports = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_URL}/all_passports`);
+            if (!response.ok) throw new Error('Ошибка загрузки паспортов');
+            const data = await response.json();
+            setAllPassports(data);
+        } catch (error) {
+            console.error("Не удалось загрузить паспорта для присвоения:", error);
+        }
     }, []);
 
-    const handleActionComplete = (message, type) => {
+    useEffect(() => {
+        fetchAllPassports();
+    }, [fetchAllPassports]);
+
+    const handleActionComplete = (message, type, updateInfo) => {
         showNotification(message, type);
-        setTimeout(() => window.location.reload(), 1500);
+
+        fetchAllPassports();
+
+        if (updateInfo && updateInfo.img && updateInfo.passportId) {
+            const updatedPreds = params.params.pred.map(p => {
+                if (p.IMG === updateInfo.img) {
+                    return { ...p, passport: updateInfo.passportId };
+                }
+                return p;
+            });
+
+            setParams(currentParams => ({
+                ...currentParams,
+                params: {
+                    ...currentParams.params,
+                    pred: updatedPreds,
+                }
+            }));
+        }
     };
+
 
     const handleOpenPassportModal = async (passportId) => {
         if (!passportId) return;
@@ -226,8 +201,15 @@ export default function Result({ params, setParams }) {
                 const errData = await response.json();
                 throw new Error(errData.detail || 'Не удалось создать паспорт.');
             }
+            const newPassport = await response.json();
+
             setOpenAddModal(false);
-            handleActionComplete('Паспорт успешно создан!', 'success');
+            handleActionComplete('Паспорт успешно создан!', 'success', {
+                img: itemForNewPassport.IMG,
+                passportId: newPassport.id
+            });
+            setInputs({ age: '', gender: '', name: '' });
+
         } catch (error) {
             console.error(error);
             showNotification(`Ошибка: ${error.message}`, 'error');
@@ -302,7 +284,7 @@ export default function Result({ params, setParams }) {
                                 <thead>
                                     <tr>
                                         <th>Имя файла</th>
-                                        <th>Распознанный вид</th>
+                                        <th>Вид</th>
                                         <th>Паспорт особи</th>
                                     </tr>
                                 </thead>
@@ -314,16 +296,15 @@ export default function Result({ params, setParams }) {
                                                         key={item.IMG}
                                                         item={item}
                                                         allPassports={allPassports}
-                                                        onActionComplete={() => {}}
-                                                        showNotification={showNotification}
-                                                        onOpenAddModal={() => {}}
+                                                        onActionComplete={handleActionComplete}
+                                                        onOpenAddModal={handleOpenAddModal}
                                                     />;
                                         }
                                         return (
                                             <tr key={item.IMG}>
-                                                <td className="filename-cell">{item.IMG}</td>
-                                                <td>{item.type}</td>
-                                                <td
+                                                <td className="filename-cell" data-label="Имя файла">{item.IMG}</td>
+                                                <td data-label="Распознанный вид">{item.type}</td>
+                                                <td data-label="Паспорт особи"
                                                     className={item.passport ? 'underline' : ''}
                                                     onClick={() => handleOpenPassportModal(item.passport)}
                                                 >
@@ -339,7 +320,7 @@ export default function Result({ params, setParams }) {
                 </div>
             </div>
 
-            <div className={`result-passport-modal ${showPassportModal ? 'visible' : 'hidden'}`}>
+            <div className={`result-passport-modal ${showPassportModal ? 'visible' : ''}`}>
                 <div className="animal-passport-wrapper">
                     <div className="close" onClick={handleClosePassportModal}>&times;</div>
                     {isInfoLoading ? (
@@ -385,7 +366,7 @@ export default function Result({ params, setParams }) {
                 </div>
             </div>
 
-            <div className={`modal-add-passport ${openAddModal ? 'visible' : 'hidden'}`}>
+            <div className={`modal-add-passport ${openAddModal ? 'visible' : ''}`}>
                  <div className="add-passport-container">
                     <div className="close" onClick={() => setOpenAddModal(false)}>&times;</div>
                     <h4 className="modal-title">Создание паспорта для: {itemForNewPassport?.type}</h4>

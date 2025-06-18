@@ -106,7 +106,7 @@
     z-index: 10002;
 }
 
-.mobile-nav-overlay.visible .mobile-nav-items {
+.mobile-nav-items.show, .mobile-nav-overlay.visible .mobile-nav-items {
     right: 0;
 }
 
