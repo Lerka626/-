@@ -70,6 +70,16 @@ async def process_zip_file(zip_path: str) -> list[str]:
 
 # --- Эндпоинты API ---
 
+@app.get("/")
+async def root():
+    """Корневой эндпоинт для проверки работоспособности API."""
+    return {"message": "Rare Animal Tracker API работает!", "version": "2.0.0"}
+
+@app.get("/health")
+async def health_check():
+    """Эндпоинт для проверки здоровья сервиса."""
+    return {"status": "healthy", "timestamp": "2025-06-18"}
+
 @app.post("/upload/", response_model=schemas.UploadResponse)
 async def upload_files_and_process(
     cords_sd: float = Form(...),

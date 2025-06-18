@@ -373,7 +373,15 @@ export default function Result({ params, setParams }) {
                     <form className="inputs_passport" onSubmit={handleAddPassportSubmit}>
                         <div className="add_name"><label>Имя</label><input type="text" name="name" value={inputs.name} onChange={handleInputChange} required /></div>
                         <div className="add_name"><label>Возраст</label><input type="number" name="age" value={inputs.age} onChange={handleInputChange} required /></div>
-                        <div className="add_name"><label>Пол</label><input type="text" name="gender" value={inputs.gender} onChange={handleInputChange} required /></div>
+                        <div className="add_name">
+                            <label>Пол</label>
+                            <select name="gender" value={inputs.gender} onChange={handleInputChange} required>
+                                <option value="">Выберите пол</option>
+                                <option value="М">Мужской</option>
+                                <option value="Ж">Женский</option>
+                                <option value="None">Неизвестно</option>
+                            </select>
+                        </div>
                         <p className="modal-info">Фото и координаты будут взяты из исходного снимка.</p>
                         <button type="submit">Создать паспорт</button>
                     </form>

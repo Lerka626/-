@@ -1,0 +1,34 @@
+# backend/Dockerfile.dev - Облегченная версия для быстрого тестирования
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Минимальные системные зависимости
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /app
+
+# Используем облегченные requirements
+COPY requirements-dev.txt requirements.txt
+
+# Быстрая установка зависимостей
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Копируем исходный код
+COPY ./app ./app
+COPY ./main.py .
+COPY ./config.py .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 

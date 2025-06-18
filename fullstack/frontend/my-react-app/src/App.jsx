@@ -1,6 +1,6 @@
 import Navigation from './components/navigation/Navigation'
 import ProcessPhoto from './components/ProcessPhoto/ProcessPhoto';
-import Zips from './components/zips/Zips';
+import Zips from './components/Zips/Zips';
 import Animals from './components/animals/animals';
 import MapPage from './components/MapPage/MapPage';
 import "./style.css";

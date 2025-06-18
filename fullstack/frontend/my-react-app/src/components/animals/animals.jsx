@@ -114,7 +114,7 @@ export default function Animals() {
             }
         } catch (error) {
             console.error("Ошибка при получении данных паспорта:", error);
-            alert(error.message);
+            setError("Не удалось загрузить детали этого измерения. Возможно, изображения недоступны или произошла ошибка сети.");
             setShowInfoModal(false);
         } finally {
             setIsInfoLoading(false);
@@ -181,9 +181,19 @@ export default function Animals() {
                     {passports.map((passport) => (
                         <div className="passport" key={passport.id}>
                             <div className="animal-img">
-                                {passport.image_preview ?
-                                    <img src={`${API_URL}/image/passport/${passport.image_preview}`} alt={passport.name} />
-                                    : <div>Нет фото</div>}
+                                {passport.image_preview ? (
+                                    <img 
+                                        src={`${API_URL}/image/passport/${passport.image_preview}`} 
+                                        alt={passport.name}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                    />
+                                ) : null}
+                                <div className="no-image-placeholder" style={{ display: passport.image_preview ? 'none' : 'flex' }}>
+                                    <span>Фото недоступно</span>
+                                </div>
                             </div>
                             <div className="text-info-animal">
                                 <div className="irb-name">{passport.name || 'Неизвестно'}</div>
@@ -206,7 +216,15 @@ export default function Animals() {
                     <form className="inputs_passport" onSubmit={handleAddPassportSubmit}>
                         <div className="add_name"><label>Имя</label><input type="text" name="name" value={inputs.name} onChange={handleInputChange} required /></div>
                         <div className="add_name"><label>Возраст</label><input type="number" name="age" value={inputs.age} onChange={handleInputChange} required /></div>
-                        <div className="add_name"><label>Пол</label><input type="text" name="gender" value={inputs.gender} onChange={handleInputChange} required /></div>
+                        <div className="add_name">
+                            <label>Пол</label>
+                            <select name="gender" value={inputs.gender} onChange={handleInputChange} required>
+                                <option value="">Выберите пол</option>
+                                <option value="М">Мужской</option>
+                                <option value="Ж">Женский</option>
+                                <option value="None">Неизвестно</option>
+                            </select>
+                        </div>
                         <div className="add_name"><label>Широта:</label><input type="text" name="cords_sd" value={inputs.cords_sd} onChange={handleInputChange} required /></div>
                         <div className="add_name"><label>Долгота:</label><input type="text" name="cords_vd" value={inputs.cords_vd} onChange={handleInputChange} required /></div>
                         <div className="add-photo">
@@ -235,12 +253,19 @@ export default function Animals() {
 
                             <div className="photo-gallery">
                                 <div className="gallery-image">
-                                    {galleryPhotos.length > 0 && (
+                                    {galleryPhotos.length > 0 ? (
                                         <img
                                           src={`${API_URL}/image/passport/${galleryPhotos[currentPhotoIndex]}`}
                                           alt={`${currentPassportInfo.name} - фото ${currentPhotoIndex + 1}`}
+                                          onError={(e) => {
+                                              e.target.style.display = 'none';
+                                              e.target.nextSibling.style.display = 'flex';
+                                          }}
                                         />
-                                    )}
+                                    ) : null}
+                                    <div className="no-image-placeholder" style={{ display: galleryPhotos.length > 0 ? 'none' : 'flex' }}>
+                                        <span>Фото недоступно</span>
+                                    </div>
                                 </div>
                                 {galleryPhotos.length > 1 && (
                                     <div className="gallery-controls">

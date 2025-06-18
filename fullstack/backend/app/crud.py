@@ -11,8 +11,17 @@ async def get_all_passports(conn: asyncpg.Connection):
 
 async def get_passport_embeddings(conn: asyncpg.Connection) -> List[tuple[int, List[float]]]:
     """Получает ID и эмбеддинги для всех существующих паспортов."""
-    passports = await conn.fetch("SELECT id, embanding FROM passports WHERE embanding IS NOT NULL")
-    return [[p['id'], json.loads(p['embanding'])] for p in passports]
+    passports = await conn.fetch("SELECT id, embanding FROM passports WHERE embanding IS NOT NULL AND embanding != ''")
+    result = []
+    for p in passports:
+        try:
+            if p['embanding'] and p['embanding'].strip():
+                embedding = json.loads(p['embanding'])
+                result.append([p['id'], embedding])
+        except (json.JSONDecodeError, ValueError):
+            # Пропускаем некорректные эмбеддинги
+            continue
+    return result
 
 async def get_passport_by_id(conn: asyncpg.Connection, passport_id: int):
     """Получает один паспорт по его ID."""
