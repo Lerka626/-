@@ -1,3 +1,6 @@
+# backend/Dockerfile
+
+# Используем современный и легкий базовый образ Python
 FROM python:3.11-slim
 
 # Устанавливаем переменные окружения для Python
@@ -10,10 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    # Очищаем кэш apt для уменьшения размера образа
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем рабочую директорию
+# Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
 # Копируем файл с зависимостями для использования кэша Docker
@@ -22,13 +24,14 @@ COPY requirements.txt .
 # Устанавливаем Python-зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем исходный код приложения, конфигурации и веса модели
+# Копируем исходный код бэкенда
 COPY ./app ./app
-COPY ./core ./core
 COPY ./weights ./weights
+COPY ./main.py .
+COPY ./config.py .
 
 # Указываем, что контейнер будет слушать порт 8000
 EXPOSE 8000
 
-# Команда для запуска приложения в продакшен режиме
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Команда для запуска приложения
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

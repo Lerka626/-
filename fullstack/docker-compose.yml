@@ -1,0 +1,43 @@
+# Sber/fullstack/docker-compose.yml
+
+version: '3.8'
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/passports:/app/passports
+      - ./backend/uploads:/app/uploads
+    environment:
+      # Передаем секреты как переменные окружения, а не храним в коде
+      - DB_USER=postgres
+      - DB_PASS=mastdmastd
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sber_project
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend/my-react-app
+    ports:
+      - "3000:80"
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mastdmastd
+      - POSTGRES_DB=sber_project
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data: # Создаем именованный том для данных БД
