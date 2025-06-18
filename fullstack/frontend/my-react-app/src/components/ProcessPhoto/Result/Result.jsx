@@ -18,11 +18,15 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal })
             return;
         }
 
+        // Получаем координаты из item (если есть), иначе 0.0
+        const coords = item.coordinates ? item.coordinates.split(',') : ['0.0', '0.0'];
+        const [lat, lng] = coords;
+
         const formData = new FormData();
         formData.append('image_name', item.IMG);
         formData.append('passport_id', selectedPassportId);
-        formData.append('cords_sd', '0.0');
-        formData.append('cords_vd', '0.0');
+        formData.append('cords_sd', lat.trim());
+        formData.append('cords_vd', lng.trim());
 
         try {
             const response = await fetch(`${API_URL}/assign_passport/`, { method: 'POST', body: formData });
