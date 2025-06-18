@@ -1,7 +1,40 @@
 import './animals.css';
 import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+
+const MiniMap = ({ path }) => {
+    // Определяем центр карты. Если есть точки, берем первую. Иначе - центр по умолчанию.
+    const mapCenter = path.length > 0 ? path[0].pos : [52.3, 91.5];
+
+    // Определяем уровень зума в зависимости от наличия точек
+    const zoomLevel = path.length > 0 ? 8 : 4;
+
+    return (
+        <div className="passport-map-container">
+            <MapContainer center={mapCenter} zoom={zoomLevel} scrollWheelZoom={false} className="passport-map">
+                <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {path.length > 0 && (
+                    <>
+                        {/* Рисуем линию маршрута */}
+                        <Polyline positions={path.map(p => p.pos)} color="royalblue" />
+                        {/* Ставим маркеры на каждую точку */}
+                        {path.map((point, index) => (
+                            <Marker key={index} position={point.pos}>
+                                <Popup>
+                                    Точка {index + 1}: {point.date}
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </>
+                )}
+            </MapContainer>
+        </div>
+    );
+};
 
 export default function Animals() {
     const [openAddModal, setOpenAddModal] = useState(false);
@@ -10,18 +43,15 @@ export default function Animals() {
     const [error, setError] = useState(null);
     const [file, setFile] = useState(null);
 
-    // States for the info modal window
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [currentPassportInfo, setCurrentPassportInfo] = useState(null);
     const [cordsHistory, setCordsHistory] = useState([]);
     const [isInfoLoading, setIsInfoLoading] = useState(false);
-
-    // States for the photo gallery inside the modal
     const [galleryPhotos, setGalleryPhotos] = useState([]);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
     const [inputs, setInputs] = useState({
-        age: '', gender: '', cords_sd: '00.00', cords_vd: '00.00', name: ''
+        age: '', gender: '', name: '', cords_sd: '00.00', cords_vd: '00.00'
     });
 
     const fetchPassports = async () => {
@@ -44,45 +74,47 @@ export default function Animals() {
 
     const handleShowPassportModal = async (passportId) => {
         if (!passportId) return;
-
-        // Reset states before opening
         setCurrentPassportInfo(null);
         setCordsHistory([]);
         setGalleryPhotos([]);
         setCurrentPhotoIndex(0);
         setIsInfoLoading(true);
         setShowInfoModal(true);
-
         try {
-            // Fetch all data for the modal concurrently
             const [passportResponse, historyResponse, photosResponse] = await Promise.all([
                 fetch(`${API_URL}/get_passport/${passportId}`),
                 fetch(`${API_URL}/passport/${passportId}/history`),
                 fetch(`${API_URL}/passport/${passportId}/photos`)
             ]);
 
-            // Check passport data
             if (!passportResponse.ok) throw new Error('Паспорт не найден');
             const passportData = await passportResponse.json();
             setCurrentPassportInfo(passportData);
 
-            // Check history data
             if (historyResponse.ok) {
                 const historyData = await historyResponse.json();
-                setCordsHistory(historyData);
+                // --- ИЗМЕНЕНИЕ: Сразу форматируем данные для карты ---
+                const formattedPath = historyData
+                    .map(record => {
+                        try {
+                            const [lat, lng] = record.coordinates.split(',').map(Number);
+                            return { pos: [lat, lng], date: new Date(record.date).toLocaleDateString() };
+                        } catch (e) {
+                            return null;
+                        }
+                    })
+                    .filter(p => p && !isNaN(p.pos[0]) && !isNaN(p.pos[1]));
+                setCordsHistory(formattedPath);
             }
 
-            // Check photos data - 'photosResponse' is correctly defined here
             if (photosResponse.ok) {
                 const photoData = await photosResponse.json();
-                // Create the gallery list: main photo first, then the rest
                 const allPhotos = [
                     passportData.image_preview,
                     ...photoData.filter(p => p !== passportData.image_preview)
                 ];
                 setGalleryPhotos(allPhotos);
             }
-
         } catch (error) {
             console.error("Ошибка при получении данных паспорта:", error);
             alert(error.message);
@@ -236,7 +268,7 @@ export default function Animals() {
                                     <ul>
                                         {cordsHistory.map((record, index) => (
                                             <li key={index}>
-                                                {new Date(record.date).toLocaleDateString()}: {record.coordinates}
+                                                {record.date}: {record.pos.join(', ')}
                                             </li>
                                         ))}
                                     </ul>
@@ -244,6 +276,7 @@ export default function Animals() {
                                     <p>История перемещений отсутствует.</p>
                                 )}
                             </div>
+                            <MiniMap path={cordsHistory} />
                         </>
                     ) : (
                          <div className="error-message">Не удалось загрузить данные.</div>

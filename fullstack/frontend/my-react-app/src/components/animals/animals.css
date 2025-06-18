@@ -366,3 +366,17 @@
     font-style: italic;
     color: #888;
 }
+
+.passport-map-container {
+    width: 100%;
+    height: 250px; /* Задаем фиксированную высоту для карты */
+    margin-top: 1.5rem;
+    border-radius: 12px;
+    overflow: hidden; /* Важно, чтобы скруглить углы карты */
+    border: 1px solid #dee2e6;
+}
+
+.passport-map {
+    width: 100%;
+    height: 100%;
+}
