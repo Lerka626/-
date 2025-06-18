@@ -10,7 +10,7 @@ from typing import List
 
 import asyncpg
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings, DATE_OF_PHOTOS
@@ -216,10 +216,114 @@ async def get_uploads_by_zip(zip_id: int, conn: asyncpg.Connection = Depends(get
 
     return {"pred": predictions_for_response, "diagram": animal_counts_diagram}
 
+
+@app.get("/passport/{passport_id}/history")
+async def get_passport_history(passport_id: int, conn: asyncpg.Connection = Depends(get_db)):
+    """Возвращает историю перемещений для одного паспорта."""
+    history_records = await crud.get_cords_history_by_passport_id(conn, passport_id)
+    return [dict(r) for r in history_records]
+
+
+@app.get("/passport/{passport_id}/photos")
+async def get_passport_photos(passport_id: int, conn: asyncpg.Connection = Depends(get_db)):
+    """Возвращает список всех фото для одной особи."""
+    photo_records = await crud.get_photos_by_passport_id(conn, passport_id)
+    return [record['processed_photo'] for record in photo_records]
+
+
+@app.post("/assign_passport/")
+async def assign_passport_to_photo(
+        image_name: str = Form(...),
+        passport_id: int = Form(...),
+        cords_sd: float = Form(...),
+        cords_vd: float = Form(...),
+        conn: asyncpg.Connection = Depends(get_db)
+):
+    """
+    Присваивает существующий паспорт неопознанной фотографии редкого вида
+    и создает для этого новую запись о местоположении.
+    """
+    # 1. Присваиваем фото паспорту в таблице Outputs
+    await crud.assign_photo_to_passport(conn, image_name, passport_id)
+
+    # 2. Создаем новую запись о местоположении для этой особи
+    coordinates = f"{cords_sd}, {cords_vd}"
+    cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
+
+    # 3. Обновляем ссылку на последние координаты в паспорте
+    await crud.update_passport_cords(conn, passport_id, cords_id)
+
+    return JSONResponse(status_code=200, content={"message": "Фото успешно присвоено паспорту."})
+
+
 @app.get("/image/passport/{image_name}")
 async def get_passport_image(image_name: str):
-    """Отдает изображение, привязанное к паспорту."""
-    image_path = os.path.join(settings.PASSPORTS_DIR, image_name)
-    if not os.path.isfile(image_path):
-        raise HTTPException(status_code=404, detail="Фото паспорта не найдено")
-    return FileResponse(image_path)
+    """
+    Отдает изображение. Сначала ищет в папке паспортов,
+    потом в папке общих загрузок (для фото из истории).
+    """
+    # Путь 1: Папка с основными фото паспортов
+    passport_image_path = os.path.join(settings.PASSPORTS_DIR, image_name)
+    if os.path.isfile(passport_image_path):
+        return FileResponse(passport_image_path)
+
+    # Путь 2: Папка с общими загрузками (для фото из истории)
+    # Этот путь используется для фото, добавленных через /upload/
+    upload_image_path = os.path.join(settings.UPLOADS_DIR, image_name)
+    if os.path.isfile(upload_image_path):
+        return FileResponse(upload_image_path)
+
+    # Если файл не найден нигде
+    raise HTTPException(status_code=404, detail="Изображение не найдено")
+
+
+@app.post("/create_passport_from_upload/", response_model=schemas.PassportInDB)
+async def create_passport_from_upload(
+        image_name: str = Form(...),
+        age: int = Form(...),
+        gender: str = Form(...),
+        name: str = Form(...),
+        cords_sd: float = Form(...),
+        cords_vd: float = Form(...),
+        conn: asyncpg.Connection = Depends(get_db)
+):
+    # 1. Проверяем, существует ли исходное фото
+    source_path = os.path.join(settings.UPLOADS_DIR, image_name)
+    if not os.path.isfile(source_path):
+        raise HTTPException(status_code=404, detail="Исходное фото для создания паспорта не найдено.")
+
+    # 2. Копируем фото в папку паспортов, так как это теперь "главное" фото особи
+    # Имя файла уже уникально, так что используем его же.
+    passport_photo_path = os.path.join(settings.PASSPORTS_DIR, image_name)
+    shutil.copy(source_path, passport_photo_path)
+
+    # 3. Получаем вид животного из записи в Outputs
+    output_record = await conn.fetchrow("SELECT species FROM Outputs WHERE processed_photo = $1", image_name)
+    if not output_record:
+        raise HTTPException(status_code=404, detail="Запись о фото не найдена в базе данных.")
+    species = output_record['species']
+
+    # 4. Извлекаем эмбеддинг из фото
+    embedding = ml_logic.extract_embedding(embedder_model, passport_photo_path)
+    if not embedding:
+        raise HTTPException(status_code=500, detail="Не удалось извлечь эмбеддинг из фото.")
+
+    embedding_str = json.dumps(embedding)
+
+    # 5. Создаем паспорт
+    passport_id = await crud.create_passport_record(
+        conn, image_name, species, age, gender, name, embedding_str
+    )
+
+    # 6. Обновляем запись в Outputs, присваивая ей ID нового паспорта
+    await crud.update_output_with_passport_id(conn, image_name, passport_id)
+
+    # 7. Создаем первую запись о местоположении для этого паспорта
+    coordinates = f"{cords_sd}, {cords_vd}"
+    cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
+    await crud.update_passport_cords(conn, passport_id, cords_id)
+
+    new_passport_record = await crud.get_passport_by_id(conn, passport_id)
+    if new_passport_record:
+        return dict(new_passport_record)
+    raise HTTPException(status_code=500, detail="Не удалось создать или найти паспорт.")

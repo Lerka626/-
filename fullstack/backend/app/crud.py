@@ -34,6 +34,16 @@ async def get_output_by_zip_id(conn: asyncpg.Connection, zip_id: int):
     """
     return await conn.fetch(query, zip_id)
 
+async def get_cords_history_by_passport_id(conn: asyncpg.Connection, passport_id: int):
+    """Получает всю историю координат для одного паспорта."""
+    query = "SELECT date, coordinates FROM Cords WHERE passport_id = $1 ORDER BY date DESC"
+    return await conn.fetch(query, passport_id)
+
+async def get_photos_by_passport_id(conn: asyncpg.Connection, passport_id: int):
+    """Получает все имена файлов фотографий для одного паспорта из таблицы Outputs."""
+    query = "SELECT processed_photo FROM Outputs WHERE pass_id = $1 ORDER BY id DESC"
+    return await conn.fetch(query, passport_id)
+
 # --- Функции создания (INSERT) ---
 
 async def create_zip_record(conn: asyncpg.Connection, upload_date_str: str, rare_animals_count: int, coordinates: str) -> int:
@@ -69,3 +79,13 @@ async def update_zip_rare_count(conn: asyncpg.Connection, zip_id: int, count: in
     """Обновляет счетчик редких животных для записи о загрузке."""
     query = "UPDATE Zips SET rare_animals_count = $1 WHERE id = $2"
     await conn.execute(query, count, zip_id)
+
+async def assign_photo_to_passport(conn: asyncpg.Connection, image_name: str, passport_id: int):
+    """Присваивает pass_id фотографии в таблице Outputs."""
+    query = "UPDATE Outputs SET pass_id = $1 WHERE processed_photo = $2"
+    await conn.execute(query, passport_id, image_name)
+
+async def update_output_with_passport_id(conn: asyncpg.Connection, image_name: str, passport_id: int):
+    """Находит запись в Outputs по имени файла и присваивает ей pass_id."""
+    query = "UPDATE Outputs SET pass_id = $1 WHERE processed_photo = $2"
+    await conn.execute(query, passport_id, image_name)
