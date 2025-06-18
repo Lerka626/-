@@ -1,9 +1,6 @@
-# app/schemas.py
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import date
-
-# --- Схемы для эндпоинта /upload/ ---
 
 class Prediction(BaseModel):
     IMG: str
@@ -16,8 +13,6 @@ class Prediction(BaseModel):
 class UploadResponse(BaseModel):
     pred: List[Prediction]
     diagram: dict[str, int]
-
-# --- Схемы для паспортов ---
 
 class PassportBase(BaseModel):
     age: int
@@ -36,7 +31,6 @@ class PassportInDB(PassportBase):
     class Config:
         from_attributes = True
 
-# --- Схемы для истории загрузок (Zips) ---
 class ZipRecord(BaseModel):
     id: int
     upload_date: date

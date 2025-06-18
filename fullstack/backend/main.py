@@ -1,4 +1,3 @@
-# main.py
 import os
 import shutil
 import uuid
@@ -20,12 +19,10 @@ from app.database import create_pool, get_db
 # --- Создание папок при старте ---
 for dir_path in [
     settings.UPLOADS_DIR,
-    settings.PASSPORTS_DIR
-]:
+    settings.PASSPORTS_DIR]:
     os.makedirs(dir_path, exist_ok=True)
 
 # --- Инициализация ML моделей при старте ---
-# Это гарантирует, что тяжелые модели загружаются один раз, а не при каждом запросе
 classifier_model = ml_logic.get_classifier_model()
 embedder_model = ml_logic.get_embedder_model()
 
@@ -42,13 +39,12 @@ app = FastAPI(title="Rare Animal Tracker API", lifespan=lifespan, version="2.0.0
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Для продакшена лучше указать конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- Вспомогательные функции ---
 async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
     """Сохраняет загруженный файл в указанную директорию с уникальным именем."""
     unique_filename = f"{uuid.uuid4().hex[:10]}-{upload_file.filename}"
@@ -243,14 +239,9 @@ async def assign_passport_to_photo(
     Присваивает существующий паспорт неопознанной фотографии редкого вида
     и создает для этого новую запись о местоположении.
     """
-    # 1. Присваиваем фото паспорту в таблице Outputs
     await crud.assign_photo_to_passport(conn, image_name, passport_id)
-
-    # 2. Создаем новую запись о местоположении для этой особи
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
-
-    # 3. Обновляем ссылку на последние координаты в паспорте
     await crud.update_passport_cords(conn, passport_id, cords_id)
 
     return JSONResponse(status_code=200, content={"message": "Фото успешно присвоено паспорту."})
@@ -262,18 +253,14 @@ async def get_passport_image(image_name: str):
     Отдает изображение. Сначала ищет в папке паспортов,
     потом в папке общих загрузок (для фото из истории).
     """
-    # Путь 1: Папка с основными фото паспортов
     passport_image_path = os.path.join(settings.PASSPORTS_DIR, image_name)
     if os.path.isfile(passport_image_path):
         return FileResponse(passport_image_path)
 
-    # Путь 2: Папка с общими загрузками (для фото из истории)
-    # Этот путь используется для фото, добавленных через /upload/
     upload_image_path = os.path.join(settings.UPLOADS_DIR, image_name)
     if os.path.isfile(upload_image_path):
         return FileResponse(upload_image_path)
 
-    # Если файл не найден нигде
     raise HTTPException(status_code=404, detail="Изображение не найдено")
 
 
@@ -287,38 +274,30 @@ async def create_passport_from_upload(
         cords_vd: float = Form(...),
         conn: asyncpg.Connection = Depends(get_db)
 ):
-    # 1. Проверяем, существует ли исходное фото
     source_path = os.path.join(settings.UPLOADS_DIR, image_name)
     if not os.path.isfile(source_path):
         raise HTTPException(status_code=404, detail="Исходное фото для создания паспорта не найдено.")
 
-    # 2. Копируем фото в папку паспортов, так как это теперь "главное" фото особи
-    # Имя файла уже уникально, так что используем его же.
     passport_photo_path = os.path.join(settings.PASSPORTS_DIR, image_name)
     shutil.copy(source_path, passport_photo_path)
 
-    # 3. Получаем вид животного из записи в Outputs
     output_record = await conn.fetchrow("SELECT species FROM Outputs WHERE processed_photo = $1", image_name)
     if not output_record:
         raise HTTPException(status_code=404, detail="Запись о фото не найдена в базе данных.")
     species = output_record['species']
 
-    # 4. Извлекаем эмбеддинг из фото
     embedding = ml_logic.extract_embedding(embedder_model, passport_photo_path)
     if not embedding:
         raise HTTPException(status_code=500, detail="Не удалось извлечь эмбеддинг из фото.")
 
     embedding_str = json.dumps(embedding)
 
-    # 5. Создаем паспорт
     passport_id = await crud.create_passport_record(
         conn, image_name, species, age, gender, name, embedding_str
     )
 
-    # 6. Обновляем запись в Outputs, присваивая ей ID нового паспорта
     await crud.update_output_with_passport_id(conn, image_name, passport_id)
 
-    # 7. Создаем первую запись о местоположении для этого паспорта
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
     await crud.update_passport_cords(conn, passport_id, cords_id)

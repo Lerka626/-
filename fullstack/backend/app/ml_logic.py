@@ -30,9 +30,6 @@ def get_classifier_model() -> torch.nn.Module:
 
     try:
         state_dict = torch.load(settings.CLASSIFIER_WEIGHTS, map_location=torch.device('cpu'))
-
-        # Убираем префикс 'resnet.' из ключей
-        # Создаем новый словарь для исправленных ключей
         new_state_dict = {}
         for key, value in state_dict.items():
             if key.startswith('resnet.'):
@@ -103,7 +100,6 @@ def get_embedder_model() -> tf.keras.Model:
 
 def extract_embedding(model: tf.keras.Model, img_path: str) -> list[float]:
     """Извлекает вектор признаков (эмбеддинг) из файла изображения."""
-    # Этот код остается без изменений, но для полноты картины я его оставляю
     try:
         img = tf.keras.utils.load_img(img_path, target_size=(224, 224))
         img_array = tf.keras.utils.img_to_array(img)

@@ -1,4 +1,3 @@
-# app/crud.py
 import json
 from datetime import datetime
 from typing import List, Optional
@@ -23,7 +22,6 @@ async def get_all_zips(conn: asyncpg.Connection):
     """Получает историю всех загрузок."""
     return await conn.fetch("SELECT * FROM zips ORDER BY upload_date DESC, id DESC")
 
-# --- ИЗМЕНЕНИЕ: Улучшаем функцию для получения даты ---
 async def get_output_by_zip_id(conn: asyncpg.Connection, zip_id: int):
     """Получает все записи Outputs для конкретного zip_id, включая дату загрузки."""
     query = """
