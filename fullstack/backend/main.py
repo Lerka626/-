@@ -298,7 +298,7 @@ async def create_passport_from_upload(
     passport_photo_path = os.path.join(settings.PASSPORTS_DIR, image_name)
     shutil.copy(source_path, passport_photo_path)
 
-    output_record = await conn.fetchrow("SELECT species FROM Outputs WHERE processed_photo = $1", image_name)
+    output_record = await conn.fetchrow("SELECT species FROM outputs WHERE processed_photo = $1", image_name)
     if not output_record:
         raise HTTPException(status_code=404, detail="Запись о фото не найдена в базе данных.")
     species = output_record['species']
