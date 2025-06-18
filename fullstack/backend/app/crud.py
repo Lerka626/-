@@ -100,7 +100,7 @@ async def update_output_with_passport_id(conn: asyncpg.Connection, image_name: s
     query = "UPDATE outputs SET pass_id = $1 WHERE processed_photo = $2"
     await conn.execute(query, passport_id, image_name)
 
-async def update_output_with_passport_and_embedding(conn: asyncpg.Connection, passport_id: int, embeding_str: str, image_name: str):
+async def update_output_with_passport_and_embeding(conn: asyncpg.Connection, passport_id: int, embeding_str: str, image_name: str):
     """Обновляет запись в Outputs, устанавливая pass_id и эмбеддинг."""
     query = "UPDATE outputs SET pass_id = $1, embeding = $2 WHERE processed_photo = $3"
     await conn.execute(query, passport_id, embeding_str, image_name)

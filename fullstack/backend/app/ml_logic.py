@@ -98,20 +98,21 @@ def get_embedder_model() -> tf.keras.Model:
         raise e
 
 
-def extract_embedding(model: tf.keras.Model, img_path: str) -> list[float]:
-    """Извлекает вектор признаков (эмбеддинг) из файла изображения."""
+def extract_embeding(model: tf.keras.Model, img_path: str) -> list[float]:
+    """
+    Извлекает эмбеддинг из изображения с помощью модели.
+    """
     try:
-        img = tf.keras.utils.load_img(img_path, target_size=(224, 224))
-        img_array = tf.keras.utils.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
-
-        features = model.predict(img_array, verbose=0)
-        return [float(x) for x in features.flatten()]
-
+        img = load_and_preprocess_image(img_path)
+        if img is None:
+            return None
+        
+        # Получаем эмбеддинг из модели
+        embeding = model.predict(img, verbose=0)
+        return embeding[0].tolist()
     except Exception as e:
-        print(f"Ошибка при извлечении эмбеддинга из {img_path}: {e}")
-        return []
+        print(f"Ошибка при извлечении эмбеддинга: {e}")
+        return None
 
 
 # ===================================================================
@@ -128,14 +129,20 @@ def cosine_similarity(a: list, b: list) -> float:
     return dot_product / (norm_a * norm_b)
 
 
-def find_most_similar_passports(new_embedding: list[float], existing_passports: list[tuple[int, list[float]]]) -> list[
+def find_most_similar_passports(new_embeding: list[float], existing_passports: list[tuple[int, list[float]]]) -> list[
     tuple[int, float]]:
-    if not new_embedding: return []
+    """
+    Находит наиболее похожие паспорта на основе косинусного сходства эмбеддингов.
+    Возвращает список кортежей (passport_id, similarity_score).
+    """
+    if not new_embeding: return []
+    
     similarities = []
-    for pass_id, pass_embedding in existing_passports:
-        sim = cosine_similarity(new_embedding, pass_embedding)
+    for pass_id, pass_embeding in existing_passports:
+        sim = cosine_similarity(new_embeding, pass_embeding)
         similarities.append((pass_id, sim))
-
+    
+    # Сортируем по убыванию сходства
     similarities.sort(key=lambda x: x[1], reverse=True)
     return similarities
 

@@ -153,7 +153,7 @@ async def upload_files_and_process(
 
         if species in settings.RARE_ANIMALS_LIST:
             rare_animals_found_count += 1
-            embeding = ml_logic.extract_embedding(embedder_model, image_path)
+            embeding = ml_logic.extract_embeding(embedder_model, image_path)
             embeding_str = json.dumps(embeding) if embeding else None
 
             if embeding and all_known_embeddings:
@@ -199,7 +199,7 @@ async def upload_passport(
         os.remove(passport_photo_path)
         raise HTTPException(status_code=400, detail=f"На фото определен вид '{species}', который не является редким.")
 
-    embeding = ml_logic.extract_embedding(embedder_model, passport_photo_path)
+    embeding = ml_logic.extract_embeding(embedder_model, passport_photo_path)
     if not embeding:
         os.remove(passport_photo_path)
         raise HTTPException(status_code=500, detail="Не удалось извлечь эмбеддинг из фото.")
@@ -302,7 +302,7 @@ async def assign_passport_to_photo(
     if not os.path.isfile(source_path):
         raise HTTPException(status_code=404, detail="Фото для присвоения не найдено.")
 
-    embeding = ml_logic.extract_embedding(embedder_model, source_path)
+    embeding = ml_logic.extract_embeding(embedder_model, source_path)
     embeding_str = json.dumps(embeding) if embeding else None
 
     await crud.assign_photo_to_passport(conn, image_name, passport_id, embeding_str)
@@ -352,7 +352,7 @@ async def create_passport_from_upload(
         raise HTTPException(status_code=404, detail="Запись о фото не найдена в базе данных.")
     species = output_record['species']
 
-    embeding = ml_logic.extract_embedding(embedder_model, passport_photo_path)
+    embeding = ml_logic.extract_embeding(embedder_model, passport_photo_path)
     if not embeding:
         raise HTTPException(status_code=500, detail="Не удалось извлечь эмбеддинг из фото.")
 
@@ -362,7 +362,7 @@ async def create_passport_from_upload(
         conn, image_name, species, age, gender, name, embeding_str
     )
 
-    await crud.update_output_with_passport_and_embedding(
+    await crud.update_output_with_passport_and_embeding(
         conn=conn,
         passport_id=passport_id,
         embeding_str=embeding_str,
