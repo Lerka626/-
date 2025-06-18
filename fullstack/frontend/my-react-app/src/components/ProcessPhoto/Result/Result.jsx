@@ -6,7 +6,8 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const RARE_ANIMALS_LIST = ["Зубр", "Выдра", "Рысь", "Норка"];
 
-const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal }) => {
+// --- ИЗМЕНЕНИЕ №1: Компонент теперь принимает 'coordinates' как пропс ---
+const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, coordinates }) => {
     const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
     const [selectedPassportId, setSelectedPassportId] = useState('');
 
@@ -18,19 +19,23 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal })
             return;
         }
 
+        // --- ИЗМЕНЕНИЕ №2: Используем переданные координаты, а не нули ---
+        const originalCoords = coordinates || '0.0,0.0';
+        const [lat, lng] = originalCoords.split(',');
+
         const formData = new FormData();
         formData.append('image_name', item.IMG);
         formData.append('passport_id', selectedPassportId);
-        formData.append('cords_sd', '0.0');
-        formData.append('cords_vd', '0.0');
+        formData.append('cords_sd', lat.trim());
+        formData.append('cords_vd', lng.trim());
 
         try {
             const response = await fetch(`${API_URL}/assign_passport/`, { method: 'POST', body: formData });
             if (!response.ok) throw new Error('Не удалось присвоить паспорт.');
 
-            // Получаем ответ, чтобы использовать его для обновления UI
             const result = await response.json();
 
+            // Теперь мы используем passport_id из ответа сервера для обновления UI
             onActionComplete('Фото успешно присвоено!', 'success', {
                 img: item.IMG,
                 passportId: result.passport_id
@@ -189,11 +194,14 @@ export default function Result({ params, setParams }) {
     const handleAddPassportSubmit = async (e) => {
         e.preventDefault();
 
+        const originalCoords = params.params.coordinates || '0.0,0.0';
+        const [lat, lng] = originalCoords.split(',');
+
         const formData = new FormData();
         formData.append('image_name', itemForNewPassport.IMG);
         Object.entries(inputs).forEach(([key, value]) => formData.append(key, value));
-        formData.append('cords_sd', '0.0');
-        formData.append('cords_vd', '0.0');
+        formData.append('cords_sd', lat.trim());
+        formData.append('cords_vd', lng.trim());
 
         try {
             const response = await fetch(`${API_URL}/create_passport_from_upload/`, { method: 'POST', body: formData });
@@ -298,6 +306,8 @@ export default function Result({ params, setParams }) {
                                                         allPassports={allPassports}
                                                         onActionComplete={handleActionComplete}
                                                         onOpenAddModal={handleOpenAddModal}
+                                                        // --- ИЗМЕНЕНИЕ №3: Передаем координаты в компонент строки ---
+                                                        coordinates={params.params.coordinates}
                                                     />;
                                         }
                                         return (

@@ -9,7 +9,7 @@ from typing import List
 
 import asyncpg
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings, DATE_OF_PHOTOS
@@ -26,6 +26,7 @@ for dir_path in [
 classifier_model = ml_logic.get_classifier_model()
 embedder_model = ml_logic.get_embedder_model()
 
+
 # --- Управление жизненным циклом приложения (пул БД) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
     yield
     print("Приложение останавливается, закрываем пул соединений...")
     await app.state.pool.close()
+
 
 app = FastAPI(title="Rare Animal Tracker API", lifespan=lifespan, version="2.0.0")
 
@@ -45,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
     """Сохраняет загруженный файл в указанную директорию с уникальным именем."""
     unique_filename = f"{uuid.uuid4().hex[:10]}-{upload_file.filename}"
@@ -52,6 +55,7 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(upload_file.file, buffer)
     return unique_filename
+
 
 async def process_zip_file(zip_path: str) -> list[str]:
     """Распаковывает ZIP-архив и возвращает список имен файлов изображений."""
@@ -68,14 +72,15 @@ async def process_zip_file(zip_path: str) -> list[str]:
     os.remove(zip_path)
     return extracted_files
 
+
 # --- Эндпоинты API ---
 
 @app.post("/upload/", response_model=schemas.UploadResponse)
 async def upload_files_and_process(
-    cords_sd: float = Form(...),
-    cords_vd: float = Form(...),
-    files: list[UploadFile] = File(...),
-    conn: asyncpg.Connection = Depends(get_db)
+        cords_sd: float = Form(...),
+        cords_vd: float = Form(...),
+        files: list[UploadFile] = File(...),
+        conn: asyncpg.Connection = Depends(get_db)
 ):
     coordinates = f"{cords_sd}, {cords_vd}"
     processed_filenames = []
@@ -96,7 +101,10 @@ async def upload_files_and_process(
     rare_animals_found_count = 0
     predictions_for_response = []
     animal_counts_diagram = {}
-    pass_embeddings = await crud.get_passport_embeddings(conn)
+
+    passport_embeddings = await crud.get_passport_embeddings(conn)
+    output_embeddings = await crud.get_output_embeddings(conn)
+    all_known_embeddings = passport_embeddings + output_embeddings
 
     for filename in processed_filenames:
         image_path = os.path.join(settings.UPLOADS_DIR, filename)
@@ -105,19 +113,21 @@ async def upload_files_and_process(
 
         animal_counts_diagram[species] = animal_counts_diagram.get(species, 0) + 1
         passport_id = None
+        embedding_str = None
 
         if species in settings.RARE_ANIMALS_LIST:
             rare_animals_found_count += 1
             embedding = ml_logic.extract_embedding(embedder_model, image_path)
+            embedding_str = json.dumps(embedding) if embedding else None
 
-            if embedding and pass_embeddings:
-                similar = ml_logic.find_most_similar_passports(embedding, pass_embeddings)
+            if embedding and all_known_embeddings:
+                similar = ml_logic.find_most_similar_passports(embedding, all_known_embeddings)
                 if similar and similar[0][1] > settings.SIMILARITY_THRESHOLD:
                     passport_id = similar[0][0]
                     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
                     await crud.update_passport_cords(conn, passport_id, cords_id)
 
-        await crud.create_output_record(conn, zip_id, species, filename, 0.99, 0, passport_id)
+        await crud.create_output_record(conn, zip_id, species, filename, 0.99, 0, passport_id, embedding_str)
 
         p_data = schemas.Prediction(
             IMG=filename, type=species, date=DATE_OF_PHOTOS,
@@ -128,17 +138,18 @@ async def upload_files_and_process(
     if rare_animals_found_count > 0:
         await crud.update_zip_rare_count(conn, zip_id, rare_animals_found_count)
 
-    return {"pred": predictions_for_response, "diagram": animal_counts_diagram}
+    return {"pred": predictions_for_response, "diagram": animal_counts_diagram, "coordinates": coordinates}
+
 
 @app.post("/upload_passport/", response_model=schemas.PassportInDB)
 async def upload_passport(
-    age: int = Form(...),
-    gender: str = Form(...),
-    name: str = Form(...),
-    cords_sd: float = Form(...),
-    cords_vd: float = Form(...),
-    image_preview: UploadFile = File(...),
-    conn: asyncpg.Connection = Depends(get_db)
+        age: int = Form(...),
+        gender: str = Form(...),
+        name: str = Form(...),
+        cords_sd: float = Form(...),
+        cords_vd: float = Form(...),
+        image_preview: UploadFile = File(...),
+        conn: asyncpg.Connection = Depends(get_db)
 ):
     if image_preview.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(status_code=400, detail="Неверный тип файла изображения.")
@@ -158,7 +169,8 @@ async def upload_passport(
         raise HTTPException(status_code=500, detail="Не удалось извлечь эмбеддинг из фото.")
 
     embedding_str = json.dumps(embedding)
-    passport_id = await crud.create_passport_record(conn, passport_photo_filename, species, age, gender, name, embedding_str)
+    passport_id = await crud.create_passport_record(conn, passport_photo_filename, species, age, gender, name,
+                                                    embedding_str)
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
     await crud.update_passport_cords(conn, passport_id, cords_id)
 
@@ -167,29 +179,29 @@ async def upload_passport(
         return dict(new_passport_record)
     raise HTTPException(status_code=404, detail="Не удалось найти только что созданный паспорт.")
 
+
 @app.get("/all_passports", response_model=List[schemas.PassportInDB])
 async def get_all_passports(conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает список всех паспортов редких животных."""
     passports_records = await crud.get_all_passports(conn)
     return [dict(p) for p in passports_records]
 
+
 @app.get("/get_passport/{passport_id}", response_model=schemas.PassportInDB)
 async def get_passport(passport_id: int, conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает детальную информацию по одному паспорту."""
     passport_record = await crud.get_passport_by_id(conn, passport_id)
     if not passport_record:
         raise HTTPException(status_code=404, detail="Паспорт не найден")
     return dict(passport_record)
 
+
 @app.get("/all_zips", response_model=List[schemas.ZipRecord])
 async def get_all_zips(conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает историю всех сессий загрузки."""
     zips_records = await crud.get_all_zips(conn)
     return [dict(z) for z in zips_records]
 
+
 @app.get("/get_uploads/{zip_id}", response_model=schemas.UploadResponse)
 async def get_uploads_by_zip(zip_id: int, conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает все распознанные объекты для конкретной сессии загрузки."""
     output_records = await crud.get_output_by_zip_id(conn, zip_id)
     if not output_records:
         raise HTTPException(status_code=404, detail="Записи для данной загрузки не найдены")
@@ -215,14 +227,12 @@ async def get_uploads_by_zip(zip_id: int, conn: asyncpg.Connection = Depends(get
 
 @app.get("/passport/{passport_id}/history")
 async def get_passport_history(passport_id: int, conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает историю перемещений для одного паспорта."""
     history_records = await crud.get_cords_history_by_passport_id(conn, passport_id)
     return [dict(r) for r in history_records]
 
 
 @app.get("/passport/{passport_id}/photos")
 async def get_passport_photos(passport_id: int, conn: asyncpg.Connection = Depends(get_db)):
-    """Возвращает список всех фото для одной особи."""
     photo_records = await crud.get_photos_by_passport_id(conn, passport_id)
     return [record['processed_photo'] for record in photo_records]
 
@@ -235,24 +245,24 @@ async def assign_passport_to_photo(
         cords_vd: float = Form(...),
         conn: asyncpg.Connection = Depends(get_db)
 ):
-    """
-    Присваивает существующий паспорт неопознанной фотографии редкого вида
-    и создает для этого новую запись о местоположении.
-    """
-    await crud.assign_photo_to_passport(conn, image_name, passport_id)
+    source_path = os.path.join(settings.UPLOADS_DIR, image_name)
+    if not os.path.isfile(source_path):
+        raise HTTPException(status_code=404, detail="Фото для присвоения не найдено.")
+
+    embedding = ml_logic.extract_embedding(embedder_model, source_path)
+    embedding_str = json.dumps(embedding) if embedding else None
+
+    await crud.assign_photo_to_passport(conn, image_name, passport_id, embedding_str)
+
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
     await crud.update_passport_cords(conn, passport_id, cords_id)
 
-    return JSONResponse(status_code=200, content={"message": "Фото успешно присвоено паспорту."})
+    return {"message": "Фото успешно присвоено паспорту.", "passport_id": passport_id}
 
 
 @app.get("/image/passport/{image_name}")
 async def get_passport_image(image_name: str):
-    """
-    Отдает изображение. Сначала ищет в папке паспортов,
-    потом в папке общих загрузок (для фото из истории).
-    """
     passport_image_path = os.path.join(settings.PASSPORTS_DIR, image_name)
     if os.path.isfile(passport_image_path):
         return FileResponse(passport_image_path)
@@ -296,7 +306,13 @@ async def create_passport_from_upload(
         conn, image_name, species, age, gender, name, embedding_str
     )
 
-    await crud.update_output_with_passport_id(conn, image_name, passport_id)
+    # --- ИЗМЕНЕНИЕ: Заменяем прямой вызов на функцию из crud ---
+    await crud.update_output_with_passport_and_embedding(
+        conn=conn,
+        passport_id=passport_id,
+        embedding_str=embedding_str,
+        image_name=image_name
+    )
 
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)

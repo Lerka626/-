@@ -13,6 +13,7 @@ class Prediction(BaseModel):
 class UploadResponse(BaseModel):
     pred: List[Prediction]
     diagram: dict[str, int]
+    coordinates: Optional[str] = None
 
 class PassportBase(BaseModel):
     age: int
