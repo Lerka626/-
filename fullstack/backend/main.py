@@ -138,7 +138,7 @@ async def upload_files_and_process(
     if rare_animals_found_count > 0:
         await crud.update_zip_rare_count(conn, zip_id, rare_animals_found_count)
 
-    return {"pred": predictions_for_response, "diagram": animal_counts_diagram}
+    return {"pred": predictions_for_response, "diagram": animal_counts_diagram, "coordinates": coordinates}
 
 @app.post("/upload_passport/", response_model=schemas.PassportInDB)
 async def upload_passport(
@@ -189,7 +189,14 @@ async def get_passport(passport_id: int, conn: asyncpg.Connection = Depends(get_
     passport_record = await crud.get_passport_by_id(conn, passport_id)
     if not passport_record:
         raise HTTPException(status_code=404, detail="Паспорт не найден")
-    return dict(passport_record)
+    passport = dict(passport_record)
+    cords_id = passport.get("cords_id")
+    if cords_id:
+        cords = await conn.fetchrow("SELECT coordinates FROM cords WHERE id = $1", cords_id)
+        passport["coordinates"] = cords["coordinates"] if cords else None
+    else:
+        passport["coordinates"] = None
+    return passport
 
 @app.get("/all_zips", response_model=List[schemas.ZipRecord])
 async def get_all_zips(conn: asyncpg.Connection = Depends(get_db)):

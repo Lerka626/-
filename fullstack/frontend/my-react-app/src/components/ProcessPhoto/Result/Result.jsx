@@ -189,11 +189,18 @@ export default function Result({ params, setParams }) {
     const handleAddPassportSubmit = async (e) => {
         e.preventDefault();
 
+        // Получаем оригинальные координаты из параметров, которые пришли от бэкенда
+        // Предоставляем "0.0,0.0" как запасной вариант, если их вдруг нет
+        const originalCoords = params.params.coordinates || '0.0,0.0';
+        const [lat, lng] = originalCoords.split(',');
+
         const formData = new FormData();
         formData.append('image_name', itemForNewPassport.IMG);
+        // Добавляем имя, возраст и пол из полей ввода
         Object.entries(inputs).forEach(([key, value]) => formData.append(key, value));
-        formData.append('cords_sd', '0.0');
-        formData.append('cords_vd', '0.0');
+        // Используем правильные координаты, а не нули
+        formData.append('cords_sd', lat.trim());
+        formData.append('cords_vd', lng.trim());
 
         try {
             const response = await fetch(`${API_URL}/create_passport_from_upload/`, { method: 'POST', body: formData });
@@ -204,6 +211,7 @@ export default function Result({ params, setParams }) {
             const newPassport = await response.json();
 
             setOpenAddModal(false);
+            // Вызываем функцию для обновления интерфейса без перезагрузки страницы
             handleActionComplete('Паспорт успешно создан!', 'success', {
                 img: itemForNewPassport.IMG,
                 passportId: newPassport.id
