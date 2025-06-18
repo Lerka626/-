@@ -11,7 +11,6 @@ export default function ProcessPhoto() {
     } else if (params.results === 'load') {
         return <div className='loadText'>Подождите, идет загрузка и обработка...</div>
     } else {
-        // Передаем setParams, чтобы из Result можно было вернуться назад
         return <Result params={params} setParams={setParams} />
     }
 }

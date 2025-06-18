@@ -64,11 +64,9 @@ export default function Filters({ setParams }) {
 
             <div className={`modal-upload ${openModal ? 'visible' : 'hidden'}`}>
                 <div className="params-container">
-                    {/* --- ИЗМЕНЕНИЕ: Заменяем текст на крестик --- */}
                     <div className="close-button" onClick={() => setOpenModal(false)}>
                         &times;
                     </div>
-                    {/* --- ИЗМЕНЕНИЕ: Меняем заголовок --- */}
                     <h4>Введите параметры фотоловушки</h4>
                     <div className="params">
                         <div className="param">
@@ -88,7 +86,6 @@ export default function Filters({ setParams }) {
                             <input onChange={handleFileSelect} type="file" name="file" multiple />
                             <span>Выберите файл(ы)</span>
                         </label>
-                        {/* --- ИЗМЕНЕНИЕ: Динамический текст инструкции --- */}
                         <div className="instructions">
                             {selectedFiles.length === 0 &&
                                 <p>Загрузите снимок (.jpeg, .png, .jpg) или серию снимков в формате (.zip)</p>

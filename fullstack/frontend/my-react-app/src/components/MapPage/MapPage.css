@@ -1,7 +1,7 @@
 .map-page-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 70px); /* Высота экрана минус шапка */
+    height: calc(100vh - 70px);
     width: 100%;
 }
 
@@ -31,9 +31,9 @@
 }
 
 .map-view {
-    flex-grow: 1; /* Карта занимает все оставшееся пространство */
+    flex-grow: 1;
     width: 100%;
-    z-index: 1; /* Чтобы карта была под шапкой */
+    z-index: 1;
 }
 
 .loading-text, .error-text {

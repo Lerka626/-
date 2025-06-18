@@ -10,13 +10,11 @@ export default function Zips() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Функция для форматирования даты в удобный вид
     const formatDate = (dateString) => {
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         return new Date(dateString).toLocaleDateString('ru-RU', options);
     };
 
-    // Загружаем список всех сессий при первом рендере страницы
     useEffect(() => {
         const fetchZips = async () => {
             setLoading(true);
@@ -36,7 +34,6 @@ export default function Zips() {
         fetchZips();
     }, []);
 
-    // Функция, которая вызывается при клике на строку в таблице
     const handleZipClick = async (zipId) => {
         setLoading(true);
         try {
@@ -53,7 +50,6 @@ export default function Zips() {
         }
     };
 
-    // Функция для возврата к списку архивов со страницы результатов
     const handleGoBack = () => {
         setSelectedZipResults(null);
         setError(null); // Сбрасываем ошибку при возврате
@@ -67,12 +63,10 @@ export default function Zips() {
         return <div className="error-message">Ошибка: {error} <button onClick={handleGoBack}>Назад</button></div>;
     }
 
-    // Если мы выбрали измерение, показываем компонент с результатами
     if (selectedZipResults) {
         return <Result params={selectedZipResults} setParams={handleGoBack} />;
     }
 
-    // В противном случае, показываем таблицу с архивом
     return (
         <div className="zips-page-container">
             <div className="name-of-str">Архив измерений</div>

@@ -33,7 +33,7 @@ export default function Navigation() {
             <div className={`mobile-nav-items ${showMenu ? 'show' : ''}`}>
                 <Link to="/zips" className="mobile-nav-item" onClick={closeMenu}>Архив измерений</Link>
                 <Link to="/animals" className="mobile-nav-item" onClick={closeMenu}>Животные</Link>
-                <Link to="/map" className="mobile-nav-item" onClick={closeMenu}>Карта перемещений</Link> {/* <-- Новая ссылка */}
+                <Link to="/map" className="mobile-nav-item" onClick={closeMenu}>Карта перемещений</Link>
             </div>
     </>
     )

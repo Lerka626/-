@@ -5,10 +5,8 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const MiniMap = ({ path }) => {
-    // Определяем центр карты. Если есть точки, берем первую. Иначе - центр по умолчанию.
     const mapCenter = path.length > 0 ? path[0].pos : [52.3, 91.5];
 
-    // Определяем уровень зума в зависимости от наличия точек
     const zoomLevel = path.length > 0 ? 8 : 4;
 
     return (
@@ -93,7 +91,6 @@ export default function Animals() {
 
             if (historyResponse.ok) {
                 const historyData = await historyResponse.json();
-                // --- ИЗМЕНЕНИЕ: Сразу форматируем данные для карты ---
                 const formattedPath = historyData
                     .map(record => {
                         try {

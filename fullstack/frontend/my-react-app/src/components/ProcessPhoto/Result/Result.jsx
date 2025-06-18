@@ -4,16 +4,14 @@ import './result.css';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Этот список должен совпадать с RARE_ANIMALS_LIST в конфиге бэкенда.
 const RARE_ANIMALS_LIST = ["Зубр", "Выдра", "Рысь", "Норка"];
 
-// Компонент для интерактивной строки вынесен наружу для оптимизации
 const ActionableRow = ({ item, allPassports, onActionComplete, showNotification, onOpenAddModal }) => {
     const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
     const [selectedPassportId, setSelectedPassportId] = useState('');
     const [openAddModal, setOpenAddModal] = useState(false);
     const [inputs, setInputs] = useState({ age: '', gender: '', name: '' });
-    const [actionStatus, setActionStatus] = useState('idle'); // 'idle', 'pending', 'success'
+    const [actionStatus, setActionStatus] = useState('idle');
 
     const relevantPassports = allPassports.filter(p => p.type === item.type);
 
@@ -33,10 +31,10 @@ const ActionableRow = ({ item, allPassports, onActionComplete, showNotification,
             const response = await fetch(`${API_URL}/assign_passport/`, { method: 'POST', body: formData });
             if (!response.ok) throw new Error('Не удалось присвоить паспорт.');
             showNotification('Фото успешно присвоено!', 'success');
-            setActionStatus('success'); // Показываем "Выполнено"
+            setActionStatus('success');
         } catch (error) {
             showNotification(error.message, 'error');
-            setActionStatus('idle'); // Возвращаем кнопку в исходное состояние
+            setActionStatus('idle');
         }
     };
 
@@ -57,11 +55,11 @@ const ActionableRow = ({ item, allPassports, onActionComplete, showNotification,
             }
             setOpenAddModal(false);
             showNotification('Паспорт успешно создан!', 'success');
-            setActionStatus('success'); // Показываем "Выполнено"
+            setActionStatus('success');
         } catch (error) {
             console.error(error);
             showNotification(`Ошибка: ${error.message}`, 'error');
-            setActionStatus('idle'); // Возвращаем кнопку в исходное состояние
+            setActionStatus('idle');
         }
     };
 
@@ -126,7 +124,6 @@ export default function Result({ params, setParams }) {
     const [allPassports, setAllPassports] = useState([]);
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
-    // Состояния для модального окна добавления паспорта
     const [openAddModal, setOpenAddModal] = useState(false);
     const [itemForNewPassport, setItemForNewPassport] = useState(null);
     const [inputs, setInputs] = useState({ age: '', gender: '', name: '' });
@@ -155,7 +152,6 @@ export default function Result({ params, setParams }) {
 
     const handleActionComplete = (message, type) => {
         showNotification(message, type);
-        // Вместо перезагрузки страницы, можно будет обновлять стейт в будущем
         setTimeout(() => window.location.reload(), 1500);
     };
 
@@ -318,10 +314,9 @@ export default function Result({ params, setParams }) {
                                                         key={item.IMG}
                                                         item={item}
                                                         allPassports={allPassports}
-                                                        // --- ИЗМЕНЕНИЕ: Убираем onActionComplete, передаем только showNotification ---
                                                         onActionComplete={() => {}}
                                                         showNotification={showNotification}
-                                                        onOpenAddModal={() => {}} // Заглушка, так как логика теперь внутри ActionableRow
+                                                        onOpenAddModal={() => {}}
                                                     />;
                                         }
                                         return (

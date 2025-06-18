@@ -468,7 +468,6 @@
     font-size: 14px;
 }
 
-/* Медиа-запросы */
 @media (max-width: 900px) {
     .work_answer {
         grid-template-columns: 1fr;
@@ -491,7 +490,7 @@
 
 .notification-banner {
     position: fixed;
-    top: -100px; /* Изначально спрятано над экраном */
+    top: -100px;
     left: 50%;
     transform: translateX(-50%);
     padding: 12px 25px;
@@ -505,15 +504,13 @@
 }
 
 .notification-banner.show {
-    top: 20px; /* "Выезжает" сверху при появлении */
+    top: 20px;
 }
 
-/* Стили для успешного уведомления */
 .notification-banner.success {
     background-color: #28a745;
 }
 
-/* Стили для уведомления об ошибке */
 .notification-banner.error {
     background-color: #dc3545;
 }

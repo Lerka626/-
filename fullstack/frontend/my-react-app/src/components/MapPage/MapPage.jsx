@@ -11,7 +11,6 @@ export default function MapPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Загружаем список всех паспортов для выпадающего меню
     useEffect(() => {
         const fetchPassports = async () => {
             try {
@@ -26,7 +25,6 @@ export default function MapPage() {
         fetchPassports();
     }, []);
 
-    // Загружаем историю перемещений, когда пользователь выбирает паспорт
     useEffect(() => {
         if (!selectedPassportId) {
             setPath([]);
@@ -51,7 +49,7 @@ export default function MapPage() {
                             return null;
                         }
                     })
-                    .filter(p => p && !isNaN(p.pos[0]) && !isNaN(p.pos[1])); // Убираем некорректные координаты
+                    .filter(p => p && !isNaN(p.pos[0]) && !isNaN(p.pos[1]));
 
                 setPath(formattedPath);
 
@@ -65,7 +63,7 @@ export default function MapPage() {
         fetchHistory();
     }, [selectedPassportId]);
 
-    const position = path.length > 0 ? path[0].pos : [54.5, 105.0]; // Центр по умолчанию или первая точка
+    const position = path.length > 0 ? path[0].pos : [54.5, 105.0];
 
     return (
         <div className="map-page-container">

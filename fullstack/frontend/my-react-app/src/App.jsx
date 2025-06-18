@@ -2,7 +2,7 @@ import Navigation from './components/navigation/Navigation'
 import ProcessPhoto from './components/ProcessPhoto/ProcessPhoto';
 import Zips from './components/zips/Zips';
 import Animals from './components/animals/animals';
-import MapPage from './components/MapPage/MapPage'; // <-- Импортируем новый компонент
+import MapPage from './components/MapPage/MapPage';
 import "./style.css";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 

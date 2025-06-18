@@ -71,7 +71,6 @@
     border-radius: 2px;
 }
 
-/* --- ИЗМЕНЕНИЕ 1: Стили для фона мобильного меню --- */
 .mobile-nav-overlay {
     position: fixed;
     top: 0;
@@ -81,7 +80,6 @@
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1001;
 
-    /* Скрываем по умолчанию */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0s 0.3s;
@@ -93,11 +91,10 @@
     transition: opacity 0.3s ease;
 }
 
-/* --- ИЗМЕНЕНИЕ 2: Стили для самого выезжающего меню --- */
 .mobile-nav-items {
     position: fixed;
     top: 0;
-    right: -300px; /* Изначально спрятано */
+    right: -300px;
     width: 280px;
     height: 100%;
     background-color: #fff;
@@ -110,7 +107,7 @@
 }
 
 .mobile-nav-overlay.visible .mobile-nav-items {
-    right: 0; /* "Выезжает" при появлении */
+    right: 0;
 }
 
 .mobile-nav-item {
