@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const RARE_ANIMALS_LIST = ["Зубр", "Выдра", "Рысь", "Норка"];
 
-const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal }) => {
+const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, coordinates }) => {
     const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
     const [selectedPassportId, setSelectedPassportId] = useState('');
 
@@ -18,9 +18,8 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal })
             return;
         }
 
-        // Получаем координаты из item (если есть), иначе 0.0
-        const coords = item.coordinates ? item.coordinates.split(',') : ['0.0', '0.0'];
-        const [lat, lng] = coords;
+        const originalCoords = coordinates || '0.0,0.0';
+        const [lat, lng] = originalCoords.split(',');
 
         const formData = new FormData();
         formData.append('image_name', item.IMG);
@@ -32,7 +31,6 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal })
             const response = await fetch(`${API_URL}/assign_passport/`, { method: 'POST', body: formData });
             if (!response.ok) throw new Error('Не удалось присвоить паспорт.');
 
-            // Получаем ответ, чтобы использовать его для обновления UI
             const result = await response.json();
 
             onActionComplete('Фото успешно присвоено!', 'success', {
@@ -193,16 +191,12 @@ export default function Result({ params, setParams }) {
     const handleAddPassportSubmit = async (e) => {
         e.preventDefault();
 
-        // Получаем оригинальные координаты из параметров, которые пришли от бэкенда
-        // Предоставляем "0.0,0.0" как запасной вариант, если их вдруг нет
         const originalCoords = params.params.coordinates || '0.0,0.0';
         const [lat, lng] = originalCoords.split(',');
 
         const formData = new FormData();
         formData.append('image_name', itemForNewPassport.IMG);
-        // Добавляем имя, возраст и пол из полей ввода
         Object.entries(inputs).forEach(([key, value]) => formData.append(key, value));
-        // Используем правильные координаты, а не нули
         formData.append('cords_sd', lat.trim());
         formData.append('cords_vd', lng.trim());
 
@@ -215,7 +209,6 @@ export default function Result({ params, setParams }) {
             const newPassport = await response.json();
 
             setOpenAddModal(false);
-            // Вызываем функцию для обновления интерфейса без перезагрузки страницы
             handleActionComplete('Паспорт успешно создан!', 'success', {
                 img: itemForNewPassport.IMG,
                 passportId: newPassport.id
@@ -310,6 +303,7 @@ export default function Result({ params, setParams }) {
                                                         allPassports={allPassports}
                                                         onActionComplete={handleActionComplete}
                                                         onOpenAddModal={handleOpenAddModal}
+                                                        coordinates={params.params.coordinates}
                                                     />;
                                         }
                                         return (

@@ -11,17 +11,20 @@ async def get_all_passports(conn: asyncpg.Connection):
 
 async def get_passport_embeddings(conn: asyncpg.Connection) -> List[tuple[int, List[float]]]:
     """Получает ID и эмбеддинги для всех существующих паспортов."""
-    passports = await conn.fetch("SELECT id, embedding FROM passports WHERE embedding IS NOT NULL AND embedding != ''")
-    result = []
-    for p in passports:
+    passports = await conn.fetch("SELECT id, embedding FROM passports WHERE embedding IS NOT NULL")
+    return [(p['id'], json.loads(p['embedding'])) for p in passports]
+
+async def get_output_embeddings(conn: asyncpg.Connection) -> List[tuple[int, List[float]]]:
+    """Получает ID паспорта и эмбеддинги из всех ранее обработанных и присвоенных фото."""
+    query = "SELECT pass_id, embedding FROM outputs WHERE pass_id IS NOT NULL AND embedding IS NOT NULL"
+    records = await conn.fetch(query)
+    results = []
+    for r in records:
         try:
-            if p['embedding'] and p['embedding'].strip():
-                embedding = json.loads(p['embedding'])
-                result.append([p['id'], embedding])
-        except (json.JSONDecodeError, ValueError):
-            # Пропускаем некорректные эмбеддинги
+            results.append((r['pass_id'], json.loads(r['embedding'])))
+        except (json.JSONDecodeError, TypeError):
             continue
-    return result
+    return results
 
 async def get_passport_by_id(conn: asyncpg.Connection, passport_id: int):
     """Получает один паспорт по его ID."""
@@ -59,10 +62,10 @@ async def create_zip_record(conn: asyncpg.Connection, upload_date_str: str, rare
     query = 'INSERT INTO zips (upload_date, rare_animals_count, coordinates) VALUES ($1, $2, $3) RETURNING id;'
     return await conn.fetchval(query, upload_date, rare_animals_count, coordinates)
 
-async def create_output_record(conn: asyncpg.Connection, zip_id: int, species: str, img_name: str, confidence: float, size: float, pass_id: Optional[int]) -> int:
-    """Создает запись о результате распознавания для одного фото."""
-    query = 'INSERT INTO outputs (zip_id, species, count, processed_photo, confidence, size, pass_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;'
-    return await conn.fetchval(query, zip_id, species, 1, img_name, confidence, size, pass_id)
+async def create_output_record(conn: asyncpg.Connection, zip_id: int, species: str, img_name: str, confidence: float, size: float, pass_id: Optional[int], embedding_str: Optional[str] = None) -> int:
+    """Создает запись о результате распознавания для одного фото, включая эмбеддинг."""
+    query = 'INSERT INTO outputs (zip_id, species, count, processed_photo, confidence, size, pass_id, embedding) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;'
+    return await conn.fetchval(query, zip_id, species, 1, img_name, confidence, size, pass_id, embedding_str)
 
 async def create_passport_record(conn: asyncpg.Connection, image_preview_path: str, species: str, age: int, gender: str, name: str, embedding_str: str) -> int:
     """Создает запись о новом паспорте для редкого животного."""
@@ -87,12 +90,17 @@ async def update_zip_rare_count(conn: asyncpg.Connection, zip_id: int, count: in
     query = "UPDATE zips SET rare_animals_count = $1 WHERE id = $2"
     await conn.execute(query, count, zip_id)
 
-async def assign_photo_to_passport(conn: asyncpg.Connection, image_name: str, passport_id: int):
-    """Присваивает pass_id фотографии в таблице Outputs."""
-    query = "UPDATE outputs SET pass_id = $1 WHERE processed_photo = $2"
-    await conn.execute(query, passport_id, image_name)
+async def assign_photo_to_passport(conn: asyncpg.Connection, image_name: str, passport_id: int, embedding_str: Optional[str] = None):
+    """Присваивает pass_id и эмбеддинг фотографии в таблице Outputs."""
+    query = "UPDATE outputs SET pass_id = $1, embedding = $2 WHERE processed_photo = $3"
+    await conn.execute(query, passport_id, embedding_str, image_name)
 
 async def update_output_with_passport_id(conn: asyncpg.Connection, image_name: str, passport_id: int):
     """Находит запись в Outputs по имени файла и присваивает ей pass_id."""
     query = "UPDATE outputs SET pass_id = $1 WHERE processed_photo = $2"
     await conn.execute(query, passport_id, image_name)
+
+async def update_output_with_passport_and_embedding(conn: asyncpg.Connection, passport_id: int, embedding_str: str, image_name: str):
+    """Обновляет запись в Outputs, устанавливая pass_id и эмбеддинг."""
+    query = "UPDATE outputs SET pass_id = $1, embedding = $2 WHERE processed_photo = $3"
+    await conn.execute(query, passport_id, embedding_str, image_name)

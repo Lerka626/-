@@ -56,15 +56,46 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
 async def process_zip_file(zip_path: str) -> list[str]:
     """Распаковывает ZIP-архив и возвращает список имен файлов изображений."""
     extracted_files = []
+    
+    # Список системных файлов и папок, которые нужно исключить
+    system_files = {
+        '__MACOSX', '.DS_Store', 'Thumbs.db', '.git', '.gitignore',
+        '__pycache__', '.vscode', '.idea', 'node_modules'
+    }
+    
+    print(f"Обработка ZIP-архива: {zip_path}")
+    
     with ZipFile(zip_path, "r") as input_zip:
         for member_name in input_zip.namelist():
-            if not member_name.startswith('__MACOSX') and member_name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]:
-                unique_filename = f"{uuid.uuid4().hex[:10]}-{Path(member_name).name}"
-                source = input_zip.open(member_name)
-                target_path = Path(settings.UPLOADS_DIR) / unique_filename
-                with open(target_path, "wb") as target_file:
-                    shutil.copyfileobj(source, target_file)
-                extracted_files.append(unique_filename)
+            # Проверяем, что файл не является системным и имеет правильное расширение
+            file_parts = member_name.split('/')
+            filename = file_parts[-1]  # Получаем имя файла без пути
+            
+            # Исключаем системные файлы и папки
+            if any(part in system_files for part in file_parts):
+                print(f"Исключен системный файл: {member_name}")
+                continue
+                
+            # Проверяем расширение файла
+            if '.' not in filename:
+                print(f"Исключен файл без расширения: {member_name}")
+                continue
+                
+            file_extension = filename.split(".")[-1].lower()
+            if file_extension not in ["png", "jpg", "jpeg"]:
+                print(f"Исключен файл с неподдерживаемым расширением: {member_name} ({file_extension})")
+                continue
+            
+            # Извлекаем файл
+            unique_filename = f"{uuid.uuid4().hex[:10]}-{filename}"
+            source = input_zip.open(member_name)
+            target_path = Path(settings.UPLOADS_DIR) / unique_filename
+            with open(target_path, "wb") as target_file:
+                shutil.copyfileobj(source, target_file)
+            extracted_files.append(unique_filename)
+            print(f"Извлечен файл: {member_name} -> {unique_filename}")
+    
+    print(f"Всего извлечено файлов: {len(extracted_files)}")
     os.remove(zip_path)
     return extracted_files
 
@@ -106,7 +137,10 @@ async def upload_files_and_process(
     rare_animals_found_count = 0
     predictions_for_response = []
     animal_counts_diagram = {}
-    pass_embeddings = await crud.get_passport_embeddings(conn)
+
+    passport_embeddings = await crud.get_passport_embeddings(conn)
+    output_embeddings = await crud.get_output_embeddings(conn)
+    all_known_embeddings = passport_embeddings + output_embeddings
 
     for filename in processed_filenames:
         image_path = os.path.join(settings.UPLOADS_DIR, filename)
@@ -115,19 +149,21 @@ async def upload_files_and_process(
 
         animal_counts_diagram[species] = animal_counts_diagram.get(species, 0) + 1
         passport_id = None
+        embedding_str = None
 
         if species in settings.RARE_ANIMALS_LIST:
             rare_animals_found_count += 1
             embedding = ml_logic.extract_embedding(embedder_model, image_path)
+            embedding_str = json.dumps(embedding) if embedding else None
 
-            if embedding and pass_embeddings:
-                similar = ml_logic.find_most_similar_passports(embedding, pass_embeddings)
+            if embedding and all_known_embeddings:
+                similar = ml_logic.find_most_similar_passports(embedding, all_known_embeddings)
                 if similar and similar[0][1] > settings.SIMILARITY_THRESHOLD:
                     passport_id = similar[0][0]
                     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
                     await crud.update_passport_cords(conn, passport_id, cords_id)
 
-        await crud.create_output_record(conn, zip_id, species, filename, 0.99, 0, passport_id)
+        await crud.create_output_record(conn, zip_id, species, filename, 0.99, 0, passport_id, embedding_str)
 
         p_data = schemas.Prediction(
             IMG=filename, type=species, date=DATE_OF_PHOTOS,
@@ -262,12 +298,19 @@ async def assign_passport_to_photo(
     Присваивает существующий паспорт неопознанной фотографии редкого вида
     и создает для этого новую запись о местоположении.
     """
-    await crud.assign_photo_to_passport(conn, image_name, passport_id)
+    source_path = os.path.join(settings.UPLOADS_DIR, image_name)
+    if not os.path.isfile(source_path):
+        raise HTTPException(status_code=404, detail="Фото для присвоения не найдено.")
+
+    embedding = ml_logic.extract_embedding(embedder_model, source_path)
+    embedding_str = json.dumps(embedding) if embedding else None
+
+    await crud.assign_photo_to_passport(conn, image_name, passport_id, embedding_str)
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
     await crud.update_passport_cords(conn, passport_id, cords_id)
 
-    return JSONResponse(status_code=200, content={"message": "Фото успешно присвоено паспорту."})
+    return JSONResponse(status_code=200, content={"message": "Фото успешно присвоено паспорту.", "passport_id": passport_id})
 
 
 @app.get("/image/passport/{image_name}")
@@ -319,7 +362,12 @@ async def create_passport_from_upload(
         conn, image_name, species, age, gender, name, embedding_str
     )
 
-    await crud.update_output_with_passport_id(conn, image_name, passport_id)
+    await crud.update_output_with_passport_and_embedding(
+        conn=conn,
+        passport_id=passport_id,
+        embedding_str=embedding_str,
+        image_name=image_name
+    )
 
     coordinates = f"{cords_sd}, {cords_vd}"
     cords_id = await crud.create_cords_record(conn, DATE_OF_PHOTOS, coordinates, passport_id)
