@@ -1,11 +1,9 @@
-import './footer.css'
-
-export default function Footer() {
-    return (
-    <>
-        <section className="footer">
-            Сделано в рамках Уральской Проектной Смены
-        </section>
-    </>
-    )
-}
+// import './footer.css'
+//
+// export default function Footer() {
+//     return (
+//         <footer className="footer">
+//             УрФУ 2025
+//         </footer>
+//     )
+// }

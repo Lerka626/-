@@ -2,91 +2,103 @@ import './zips.css';
 import { useEffect, useState } from 'react';
 import Result from '../ProcessPhoto/Result/Result';
 
-export default function Zips() {
-    const [data, setData] = useState([]);
-    const [cIndex, setCIndex] = useState(null);
-    const [params, setParams] = useState({"results": null}); 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
+export default function Zips() {
+    const [zipsData, setZipsData] = useState([]);
+    const [selectedZipResults, setSelectedZipResults] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Функция для форматирования даты в удобный вид
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('ru-RU', options);
     };
 
+    // Загружаем список всех сессий при первом рендере страницы
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchZips = async () => {
+            setLoading(true);
             try {
-                const response = await fetch('http://92.255.107.199:8000/all_zips', {
-                    method: 'GET',
-                });
-
+                const response = await fetch(`${API_URL}/all_zips`);
                 if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
+                    throw new Error('Не удалось загрузить архив измерений.');
                 }
-
-                const jsonData = await response.json();
-                setData(jsonData);
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
+                const data = await response.json();
+                setZipsData(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
             }
         };
-        fetchData();
+        fetchZips();
     }, []);
 
-    useEffect(() => {
-        const fetchParams = async () => {
-            try {
-                const response = await fetch(`http://92.255.107.199:8000/get_uploads/${cIndex}`, {
-                    method: 'GET',
-                });
-
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-
-                const paramsData = await response.json();
-                setParams({'results': 1, 'params': paramsData});
-            } catch (error) {
-                console.error('There was a problem with the fetch operation for uploads:', error);
+    // Функция, которая вызывается при клике на строку в таблице
+    const handleZipClick = async (zipId) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/get_uploads/${zipId}`);
+            if (!response.ok) {
+                throw new Error('Не удалось загрузить детали этого измерения.');
             }
-        };
-
-        if (cIndex !== null) {
-            fetchParams();
+            const resultsData = await response.json();
+            setSelectedZipResults({ 'results': 1, 'params': resultsData });
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
-    }, [cIndex]);
+    };
 
-    if (params.results !== null) {
-        return <Result params={params} setParams={setParams}/>;
-    } else {
+    // Функция для возврата к списку архивов со страницы результатов
+    const handleGoBack = () => {
+        setSelectedZipResults(null);
+        setError(null); // Сбрасываем ошибку при возврате
+    };
+
+    if (loading) {
+        return <div className="loading-message">Загрузка архива...</div>;
+    }
+
+    if (error) {
+        return <div className="error-message">Ошибка: {error} <button onClick={handleGoBack}>Назад</button></div>;
+    }
+
+    // Если мы выбрали измерение, показываем компонент с результатами
+    if (selectedZipResults) {
+        return <Result params={selectedZipResults} setParams={handleGoBack} />;
+    }
+
+    // В противном случае, показываем таблицу с архивом
     return (
-        <div className="zips-table">
-            <div className="name-of-str">
-                Архив измерений
-            </div>
-            <table className="results-table">
-                <thead>
-                    <tr>
-                        <th>Дата обработки</th>
-                        <th>Редкие животные</th>
-                        <th>Широта, долгота</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {data.map((item, index) => (
-                        <tr key={index} onClick={() => setCIndex(item.id)}> 
-                            <th>{formatDate(item.upload_date)}</th>
-                            <th>{item.rare_animals_count}</th>
-                            <th>{item.coordinates}</th>
+        <div className="zips-page-container">
+            <div className="name-of-str">Архив измерений</div>
+            <p className="zips-subtitle">Нажмите на любую запись, чтобы просмотреть детальный отчет.</p>
+            <div className="table-container">
+                <table className="archive-table">
+                    <thead>
+                        <tr>
+                            <th>ID Загрузки</th>
+                            <th>Дата</th>
+                            <th>Координаты</th>
+                            <th>Редких видов найдено</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-            Нажмите на запись, чтоб увидеть полный отчет
+                    </thead>
+                    <tbody>
+                        {zipsData.map((item) => (
+                            <tr key={item.id} onClick={() => handleZipClick(item.id)}>
+                                <td>{item.id}</td>
+                                <td>{formatDate(item.upload_date)}</td>
+                                <td>{item.coordinates || 'Не указаны'}</td>
+                                <td>{item.rare_animals_count}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    )}
+    );
 }
-
-

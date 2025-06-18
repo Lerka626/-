@@ -6,12 +6,12 @@ import { useState } from 'react'
 export default function ProcessPhoto() {
     const [params, setParams] = useState({"results": 0})
    
-    if (params.results == 0) {
-        return <Filters setParams = {setParams} />
-    } else if (params.results == 'load') {
-        return <div className='loadText'>Подождите, идет загрузка...</div>
+    if (params.results === 0) {
+        return <Filters setParams={setParams} />
+    } else if (params.results === 'load') {
+        return <div className='loadText'>Подождите, идет загрузка и обработка...</div>
     } else {
-        return <Result params = {params} setParams = {setParams}/>
+        // Передаем setParams, чтобы из Result можно было вернуться назад
+        return <Result params={params} setParams={setParams} />
     }
-    
 }

@@ -1,6 +1,6 @@
 import Navigation from './components/navigation/Navigation'
 import ProcessPhoto from './components/ProcessPhoto/ProcessPhoto';
-import Footer from './components/footer/Footer'
+// import Footer from './components/footer/Footer' // Убрали импорт футера
 import Zips from './components/zips/Zips';
 import Animals from './components/animals/animals';
 import "./style.css";
@@ -10,28 +10,17 @@ export default function App() {
   return (
     <>
       <Router>
-          <Routes>
-              <Route path="/" element={
-                <>
-                  <Navigation/>
-                  <ProcessPhoto/>
-                  <Footer/>
-                </>} />
-              <Route path="/zips" element={
-                <>
-                  <Navigation/>
-                  <Zips/>
-                  <Footer/>
-                </>
-              } />
-              <Route path="/animals" element={
-                <>
-                  <Navigation/>
-                  <Animals/>
-                  <Footer/>
-                </>
-              } />
-          </Routes>
+          {/* Навигация теперь находится вне Routes и будет отображаться на всех страницах */}
+          <Navigation/>
+
+          {/* Основной контент страницы будет меняться внутри этого блока */}
+          <main className="main-content-area">
+            <Routes>
+                <Route path="/" element={<ProcessPhoto />} />
+                <Route path="/zips" element={<Zips />} />
+                <Route path="/animals" element={<Animals />} />
+            </Routes>
+          </main>
       </Router>
     </>
   )
