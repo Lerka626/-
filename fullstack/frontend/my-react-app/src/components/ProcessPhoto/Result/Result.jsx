@@ -6,8 +6,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const RARE_ANIMALS_LIST = ["Зубр", "Выдра", "Рысь", "Норка"];
 
-// --- ИЗМЕНЕНИЕ №1: Компонент теперь принимает 'coordinates' как пропс ---
-const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, coordinates }) => {
+const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, coordinates, onOpenImageModal }) => {
     const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
     const [selectedPassportId, setSelectedPassportId] = useState('');
 
@@ -19,7 +18,6 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, c
             return;
         }
 
-        // --- ИЗМЕНЕНИЕ №2: Используем переданные координаты, а не нули ---
         const originalCoords = coordinates || '0.0,0.0';
         const [lat, lng] = originalCoords.split(',');
 
@@ -35,7 +33,6 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, c
 
             const result = await response.json();
 
-            // Теперь мы используем passport_id из ответа сервера для обновления UI
             onActionComplete('Фото успешно присвоено!', 'success', {
                 img: item.IMG,
                 passportId: result.passport_id
@@ -48,7 +45,9 @@ const ActionableRow = ({ item, allPassports, onActionComplete, onOpenAddModal, c
 
     return (
         <tr className="actionable-row">
-            <td className="filename-cell" data-label="Имя файла">{item.IMG}</td>
+            <td className="filename-cell clickable-filename" data-label="Имя файла" onClick={() => onOpenImageModal(item.IMG)}>
+                {item.IMG}
+            </td>
             <td data-label="Распознанный вид">{item.type}</td>
             <td className="action-cell" data-label="Паспорт особи">
                 {!isActionPanelOpen ? (
@@ -88,6 +87,10 @@ export default function Result({ params, setParams }) {
     const [inputs, setInputs] = useState({ age: '', gender: '', name: '' });
     const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
+    // Состояние для нового модального окна с изображением
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [selectedImage, setSelectedImage] = useState('');
+
     const COLORS_pie = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560'];
 
     const showNotification = (message, type) => {
@@ -96,6 +99,7 @@ export default function Result({ params, setParams }) {
             setNotification({ show: false, message: '', type: '' });
         }, 3000);
     };
+
     const fetchAllPassports = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/all_passports`);
@@ -113,9 +117,7 @@ export default function Result({ params, setParams }) {
 
     const handleActionComplete = (message, type, updateInfo) => {
         showNotification(message, type);
-
         fetchAllPassports();
-
         if (updateInfo && updateInfo.img && updateInfo.passportId) {
             const updatedPreds = params.params.pred.map(p => {
                 if (p.IMG === updateInfo.img) {
@@ -123,17 +125,16 @@ export default function Result({ params, setParams }) {
                 }
                 return p;
             });
-
             setParams(currentParams => ({
                 ...currentParams,
                 params: {
                     ...currentParams.params,
                     pred: updatedPreds,
+                    coordinates: currentParams.params.coordinates,
                 }
             }));
         }
     };
-
 
     const handleOpenPassportModal = async (passportId) => {
         if (!passportId) return;
@@ -161,7 +162,7 @@ export default function Result({ params, setParams }) {
                 const allPhotos = [
                     passportData.image_preview,
                     ...photoData.filter(p => p !== passportData.image_preview)
-                ];
+                ].filter(Boolean);
                 setGalleryPhotos(allPhotos);
             }
         } catch (error) {
@@ -175,6 +176,17 @@ export default function Result({ params, setParams }) {
 
     const handleClosePassportModal = () => {
         setShowPassportModal(false);
+    };
+
+    // Функции для управления модальным окном с фото
+    const handleOpenImageModal = (imageName) => {
+        setSelectedImage(imageName);
+        setShowImageModal(true);
+    };
+
+    const handleCloseImageModal = () => {
+        setShowImageModal(false);
+        setSelectedImage('');
     };
 
     const handlePhotoChange = (direction) => {
@@ -193,7 +205,6 @@ export default function Result({ params, setParams }) {
 
     const handleAddPassportSubmit = async (e) => {
         e.preventDefault();
-
         const originalCoords = params.params.coordinates || '0.0,0.0';
         const [lat, lng] = originalCoords.split(',');
 
@@ -210,14 +221,12 @@ export default function Result({ params, setParams }) {
                 throw new Error(errData.detail || 'Не удалось создать паспорт.');
             }
             const newPassport = await response.json();
-
             setOpenAddModal(false);
             handleActionComplete('Паспорт успешно создан!', 'success', {
                 img: itemForNewPassport.IMG,
                 passportId: newPassport.id
             });
             setInputs({ age: '', gender: '', name: '' });
-
         } catch (error) {
             console.error(error);
             showNotification(`Ошибка: ${error.message}`, 'error');
@@ -236,7 +245,6 @@ export default function Result({ params, setParams }) {
     }
 
     const { pred = [], diagram = {} } = params.params;
-
     const data_pie = Object.entries(diagram).map(([key, value]) => ({ name: key, value: value }));
     const totalPhotos = pred.length;
     const totalAnimals = data_pie.reduce((sum, entry) => sum + entry.value, 0);
@@ -306,13 +314,15 @@ export default function Result({ params, setParams }) {
                                                         allPassports={allPassports}
                                                         onActionComplete={handleActionComplete}
                                                         onOpenAddModal={handleOpenAddModal}
-                                                        // --- ИЗМЕНЕНИЕ №3: Передаем координаты в компонент строки ---
                                                         coordinates={params.params.coordinates}
+                                                        onOpenImageModal={handleOpenImageModal}
                                                     />;
                                         }
                                         return (
                                             <tr key={item.IMG}>
-                                                <td className="filename-cell" data-label="Имя файла">{item.IMG}</td>
+                                                <td className="filename-cell clickable-filename" data-label="Имя файла" onClick={() => handleOpenImageModal(item.IMG)}>
+                                                    {item.IMG}
+                                                </td>
                                                 <td data-label="Распознанный вид">{item.type}</td>
                                                 <td data-label="Паспорт особи"
                                                     className={item.passport ? 'underline' : ''}
@@ -387,6 +397,15 @@ export default function Result({ params, setParams }) {
                         <p className="modal-info">Фото и координаты будут взяты из исходного снимка.</p>
                         <button type="submit">Создать паспорт</button>
                     </form>
+                </div>
+            </div>
+
+            <div className={`image-preview-modal ${showImageModal ? 'visible' : ''}`} onClick={handleCloseImageModal}>
+                <div className="image-preview-wrapper" onClick={(e) => e.stopPropagation()}>
+                    <div className="close" onClick={handleCloseImageModal}>&times;</div>
+                    {selectedImage && (
+                         <img src={`${API_URL}/image/passport/${selectedImage}`} alt={`Preview of ${selectedImage}`} />
+                    )}
                 </div>
             </div>
         </>
