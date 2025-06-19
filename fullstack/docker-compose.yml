@@ -35,8 +35,12 @@ services:
   frontend:
     build:
       context: ./frontend/my-react-app
+      args:
+        - VITE_API_BASE_URL=http://77.239.125.100:8000
     ports:
-      - "3000:80" # Ваш сайт будет доступен на http://localhost:3000
+      - "80:80" # Ваш сайт будет доступен на http://77.239.125.100
+    environment:
+      - VITE_API_BASE_URL=http://77.239.125.100:8000
     depends_on:
       - backend
 

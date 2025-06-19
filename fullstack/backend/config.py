@@ -5,7 +5,7 @@ from datetime import datetime
 class Settings(BaseSettings):
     DB_USER: str = "postgres"
     DB_PASS: str = "mastdmastd"
-    DB_HOST: str = "localhost"
+    DB_HOST: str = "db"
     DB_PORT: int = 5432
     DB_NAME: str = "sber_project"
 
