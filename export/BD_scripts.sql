@@ -41,7 +41,8 @@ CREATE TABLE Outputs (
     processed_photo TEXT,
     confidence REAL,
     size REAL,
-    pass_id INTEGER REFERENCES Passports(id) ON DELETE SET NULL
+    pass_id INTEGER REFERENCES Passports(id) ON DELETE SET NULL,
+    embedding TEXT
 );
 
 -- Связующая таблица для отношения "многие-ко-многим" между Outputs и Passports
