@@ -539,3 +539,82 @@
     font-weight: bold;
     font-size: 14px;
 }
+
+/* Стили для кликабельного имени файла в таблице */
+.clickable-filename {
+    color: #0d6efd;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.clickable-filename:hover {
+    color: #0a58ca;
+}
+
+
+/*
+ * ========================================================
+ * ==   НОВЫЕ СТИЛИ: Для модального окна с фото          ==
+ * ========================================================
+*/
+
+/* Фон-оверлей для модального окна */
+.image-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Делаем фон чуть темнее */
+    z-index: 1002;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s 0.3s;
+}
+
+.image-preview-modal.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease;
+}
+
+/* Контейнер для самого изображения */
+.image-preview-wrapper {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.image-preview-modal.visible .image-preview-wrapper {
+    transform: scale(1);
+}
+
+/* Стили для изображения внутри модалки */
+.image-preview-wrapper img {
+    display: block;
+    max-width: 100%;
+    max-height: 90vh; /* Ограничиваем высоту, чтобы влезало в экран */
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.image-preview-wrapper .close {
+    position: absolute;
+    top: -1px;
+    right: 5px;
+    font-size: 2.5rem;
+    color: white;
+    cursor: pointer;
+    background: none;
+    border: none;
+    line-height: 1;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.7);
+}
